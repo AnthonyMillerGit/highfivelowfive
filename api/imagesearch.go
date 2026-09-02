@@ -54,7 +54,11 @@ func (c *searchCache) put(key string, results []ImageResult) {
 // need no credentials at all; film does, so it simply is not offered when the
 // key is absent rather than failing at search time.
 func (a *App) registerProviders() {
-	a.Providers = map[string]provider{"album": &musicBrainz{}}
+	a.Providers = map[string]provider{
+		"anything": &openverse{},
+		"commons":  &commons{},
+		"album":    &musicBrainz{},
+	}
 	if a.Cfg.TMDBKey != "" {
 		a.Providers["film"] = &tmdb{apiKey: a.Cfg.TMDBKey}
 	}
@@ -70,7 +74,7 @@ func (a *App) handleImageSources(w http.ResponseWriter, r *http.Request) {
 	}
 	// Fixed order, so the picker's tabs do not shuffle between requests.
 	out := []source{}
-	for _, key := range []string{"film", "album"} {
+	for _, key := range []string{"anything", "film", "album", "commons"} {
 		if p, ok := a.Providers[key]; ok {
 			out = append(out, source{Name: p.name(), Label: p.label()})
 		}

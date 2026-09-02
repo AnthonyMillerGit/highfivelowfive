@@ -76,6 +76,7 @@ func main() {
 		r.Get("/api/feed", app.handleFeed)
 		r.Get("/api/image-sources", app.handleImageSources)
 		r.Get("/api/image-search", app.handleImageSearch)
+		r.Post("/api/image-resolve", app.handleResolveImage)
 		r.Post("/api/users/{username}/follow", app.handleFollow)
 		r.Delete("/api/users/{username}/follow", app.handleUnfollow)
 	})

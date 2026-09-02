@@ -194,3 +194,120 @@ func (t *tmdb) search(ctx context.Context, query string) ([]ImageResult, error) 
 	}
 	return results, nil
 }
+
+// ------------------------------------------------- anything (no key)
+
+// openverse is general image search: type whatever you want and look at
+// pictures. Everything it returns is openly licensed, which is the reason to
+// prefer it over scraping a search engine.
+type openverse struct{}
+
+func (o *openverse) name() string  { return "anything" }
+func (o *openverse) label() string { return "Anything" }
+
+func (o *openverse) search(ctx context.Context, query string) ([]ImageResult, error) {
+	// 20 is Openverse's ceiling for unauthenticated requests; asking for more
+	// is refused outright rather than clamped.
+	endpoint := "https://api.openverse.org/v1/images/?page_size=20&q=" + url.QueryEscape(query)
+
+	var payload struct {
+		Results []struct {
+			ID        string `json:"id"`
+			Title     string `json:"title"`
+			Creator   string `json:"creator"`
+			License   string `json:"license"`
+			Thumbnail string `json:"thumbnail"`
+			URL       string `json:"url"`
+		} `json:"results"`
+	}
+	if err := getJSON(ctx, endpoint, map[string]string{"User-Agent": mbUserAgent}, &payload); err != nil {
+		return nil, err
+	}
+
+	results := make([]ImageResult, 0, len(payload.Results))
+	for _, r := range payload.Results {
+		if r.Thumbnail == "" {
+			continue
+		}
+		// Credit travels with the result. Openly licensed does not mean
+		// unattributed, and the person picking should see whose work it is.
+		credit := r.Creator
+		if r.License != "" {
+			if credit != "" {
+				credit += " · "
+			}
+			credit += strings.ToUpper(r.License)
+		}
+		// Openverse's own thumbnail is served by Openverse; the original URL
+		// points at whichever site hosts it and may refuse hotlinking.
+		results = append(results, ImageResult{
+			Ref:      r.ID,
+			Title:    firstNonEmpty(r.Title, "Untitled"),
+			Subtitle: credit,
+			ImageURL: r.Thumbnail,
+			ThumbURL: r.Thumbnail,
+		})
+	}
+	return results, nil
+}
+
+// ------------------------------------------- people & places (no key)
+
+// commons searches Wikimedia Commons, which is where photographs of real
+// people, places and things actually live — the case none of the other
+// sources cover.
+type commons struct{}
+
+func (c *commons) name() string  { return "commons" }
+func (c *commons) label() string { return "People & places" }
+
+func (c *commons) search(ctx context.Context, query string) ([]ImageResult, error) {
+	endpoint := "https://commons.wikimedia.org/w/api.php?action=query&format=json" +
+		"&generator=search&gsrnamespace=6&gsrlimit=24&prop=imageinfo" +
+		"&iiprop=url|extmetadata&iiurlwidth=300&gsrsearch=" + url.QueryEscape(query)
+
+	var payload struct {
+		Query struct {
+			Pages map[string]struct {
+				Title     string `json:"title"`
+				ImageInfo []struct {
+					URL         string `json:"url"`
+					ThumbURL    string `json:"thumburl"`
+					ExtMetadata struct {
+						Artist struct {
+							Value string `json:"value"`
+						} `json:"Artist"`
+					} `json:"extmetadata"`
+				} `json:"imageinfo"`
+			} `json:"pages"`
+		} `json:"query"`
+	}
+	if err := getJSON(ctx, endpoint, map[string]string{"User-Agent": mbUserAgent}, &payload); err != nil {
+		return nil, err
+	}
+
+	results := make([]ImageResult, 0, len(payload.Query.Pages))
+	for key, page := range payload.Query.Pages {
+		if len(page.ImageInfo) == 0 || page.ImageInfo[0].ThumbURL == "" {
+			continue
+		}
+		info := page.ImageInfo[0]
+		results = append(results, ImageResult{
+			Ref:      key,
+			Title:    strings.TrimSuffix(strings.TrimPrefix(page.Title, "File:"), ".jpg"),
+			Subtitle: "Wikimedia Commons",
+			ImageURL: info.ThumbURL,
+			ThumbURL: info.ThumbURL,
+		})
+	}
+	return results, nil
+}
+
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if strings.TrimSpace(v) != "" {
+			return v
+		}
+	}
+	return ""
+}
