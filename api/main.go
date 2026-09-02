@@ -15,8 +15,10 @@ import (
 // App carries the shared dependencies every handler needs. Passing this around
 // instead of using package-level globals keeps handlers testable.
 type App struct {
-	DB  *pgxpool.Pool
-	Cfg Config
+	DB          *pgxpool.Pool
+	Cfg         Config
+	Providers   map[string]provider
+	SearchCache *searchCache
 }
 
 func main() {
@@ -27,6 +29,7 @@ func main() {
 	defer pool.Close()
 
 	app := &App{DB: pool, Cfg: cfg}
+	app.registerProviders()
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
@@ -71,6 +74,8 @@ func main() {
 		r.Post("/api/lists/{listID}/comments", app.handleCreateComment)
 		r.Delete("/api/comments/{commentID}", app.handleDeleteComment)
 		r.Get("/api/feed", app.handleFeed)
+		r.Get("/api/image-sources", app.handleImageSources)
+		r.Get("/api/image-search", app.handleImageSearch)
 		r.Post("/api/users/{username}/follow", app.handleFollow)
 		r.Delete("/api/users/{username}/follow", app.handleUnfollow)
 	})

@@ -21,8 +21,11 @@ export function AuthProvider({ children }) {
         setUser(u);
         setStatus("authenticated");
       })
-      .catch(() => {
-        tokenStore.clear();
+      .catch((err) => {
+        // Only a 401 means the token is actually bad. A network blip or a
+        // restarted API must not throw the session away — otherwise every
+        // hiccup silently signs the user out and loses their place.
+        if (err.status === 401) tokenStore.clear();
         setStatus("anonymous");
       });
   }, []);

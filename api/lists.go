@@ -21,9 +21,11 @@ const (
 )
 
 type createItemRequest struct {
-	Title    string  `json:"title"`
-	Note     *string `json:"note"`
-	ImageURL *string `json:"image_url"`
+	Title       string  `json:"title"`
+	Note        *string `json:"note"`
+	ImageURL    *string `json:"image_url"`
+	ImageSource *string `json:"image_source"`
+	ImageRef    *string `json:"image_ref"`
 }
 
 type createListRequest struct {
@@ -80,6 +82,25 @@ func (a *App) handleCreateList(w http.ResponseWriter, r *http.Request) {
 				req.Items[i].ImageURL = nil
 			} else {
 				req.Items[i].ImageURL = &clean
+			}
+		}
+		// Provenance comes from the client, so it is checked against a known
+		// set rather than trusted — an unrecognised source is recorded as a
+		// plain link instead of being stored as whatever was sent.
+		if req.Items[i].ImageURL == nil {
+			req.Items[i].ImageSource, req.Items[i].ImageRef = nil, nil
+		} else {
+			source := "link"
+			if req.Items[i].ImageSource != nil {
+				if _, known := a.Providers[*req.Items[i].ImageSource]; known {
+					source = *req.Items[i].ImageSource
+				}
+			}
+			req.Items[i].ImageSource = &source
+			if source == "link" {
+				req.Items[i].ImageRef = nil
+			} else if req.Items[i].ImageRef != nil && len(*req.Items[i].ImageRef) > 200 {
+				req.Items[i].ImageRef = nil
 			}
 		}
 	}
@@ -163,18 +184,11 @@ func (a *App) insertList(ctx context.Context, userID int64, req createListReques
 	list.Items = make([]ListItem, 0, len(req.Items))
 	for i, it := range req.Items {
 		var saved ListItem
-		// A pasted link is recorded as source "link" so it can be told apart
-		// from an uploaded or provider-sourced image later.
-		var source *string
-		if it.ImageURL != nil {
-			s := "link"
-			source = &s
-		}
 		err = tx.QueryRow(ctx, `
-			INSERT INTO list_items (list_id, rank, title, note, image_url, image_source)
-			VALUES ($1, $2, $3, $4, $5, $6)
+			INSERT INTO list_items (list_id, rank, title, note, image_url, image_source, image_ref)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
 			RETURNING id, rank, title, note, image_url, image_source, image_ref`,
-			list.ID, i+1, it.Title, it.Note, it.ImageURL, source,
+			list.ID, i+1, it.Title, it.Note, it.ImageURL, it.ImageSource, it.ImageRef,
 		).Scan(&saved.ID, &saved.Rank, &saved.Title, &saved.Note,
 			&saved.ImageURL, &saved.ImageSource, &saved.ImageRef)
 		if err != nil {

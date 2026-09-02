@@ -9,7 +9,12 @@ import Alert from "../components/Alert";
 import ItemRow from "../components/ItemRow";
 import { SHAPES } from "../components/ItemImage";
 
-const blank = (key) => ({ key, title: "", note: "", image: "" });
+/** The picker tags each result with the tab it came from. */
+const sourceOf = (result) => result.source ?? "link";
+
+const blank = (key) => ({
+  key, title: "", note: "", image: "", imageSource: null, imageRef: null,
+});
 
 export default function NewList() {
   const { user } = useAuth();
@@ -31,6 +36,23 @@ export default function NewList() {
   function updateItem(key, field, value) {
     setItems((prev) =>
       prev.map((it) => (it.key === key ? { ...it, [field]: value } : it))
+    );
+  }
+
+  /** A picked result carries where it came from, so the row remembers its
+   *  provenance and not just the URL. Passing null clears the picture. */
+  function pickImage(key, result) {
+    setItems((prev) =>
+      prev.map((it) =>
+        it.key === key
+          ? {
+              ...it,
+              image: result?.image_url ?? "",
+              imageSource: result ? sourceOf(result) : null,
+              imageRef: result?.ref ?? null,
+            }
+          : it
+      )
     );
   }
 
@@ -63,6 +85,8 @@ export default function NewList() {
         title: it.title.trim(),
         note: it.note.trim(),
         image: it.image.trim(),
+        imageSource: it.imageSource,
+        imageRef: it.imageRef,
       }))
       .filter((it) => it.title !== "");
 
@@ -82,6 +106,8 @@ export default function NewList() {
             title: it.title,
             note: it.note || null,
             image_url: it.image || null,
+            image_source: it.imageSource,
+            image_ref: it.imageRef,
           })),
         },
       });
@@ -209,6 +235,7 @@ export default function NewList() {
                 isRanked={isRanked}
                 shape={shape}
                 onChange={updateItem}
+                onPickImage={pickImage}
                 onMove={moveItem}
                 onRemove={removeItem}
               />
