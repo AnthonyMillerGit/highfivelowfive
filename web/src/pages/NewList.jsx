@@ -7,8 +7,9 @@ import Field from "../components/Field";
 import Button from "../components/Button";
 import Alert from "../components/Alert";
 import ItemRow from "../components/ItemRow";
+import { SHAPES } from "../components/ItemImage";
 
-const blank = (key) => ({ key, title: "", note: "" });
+const blank = (key) => ({ key, title: "", note: "", image: "" });
 
 export default function NewList() {
   const { user } = useAuth();
@@ -23,6 +24,7 @@ export default function NewList() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [isRanked, setIsRanked] = useState(true);
+  const [shape, setShape] = useState("square");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
 
@@ -57,7 +59,11 @@ export default function NewList() {
     // Trailing blank rows are the normal way people leave a builder, so drop
     // them rather than making the server reject the whole list.
     const filled = items
-      .map((it) => ({ title: it.title.trim(), note: it.note.trim() }))
+      .map((it) => ({
+        title: it.title.trim(),
+        note: it.note.trim(),
+        image: it.image.trim(),
+      }))
       .filter((it) => it.title !== "");
 
     if (!title.trim()) return setError("Give the list a title.");
@@ -71,7 +77,12 @@ export default function NewList() {
           title: title.trim(),
           description: description.trim() || null,
           is_ranked: isRanked,
-          items: filled.map((it) => ({ title: it.title, note: it.note || null })),
+          image_shape: shape,
+          items: filled.map((it) => ({
+            title: it.title,
+            note: it.note || null,
+            image_url: it.image || null,
+          })),
         },
       });
       navigate(`/u/${user.username}/${created.slug}`, { replace: true });
@@ -141,6 +152,43 @@ export default function NewList() {
           </div>
         </fieldset>
 
+        {/* Shape is a property of the list because a list is almost always one
+            kind of thing — and mixed ratios make the rows impossible to read. */}
+        <fieldset className="flex flex-col gap-2">
+          <legend className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
+            Picture shape
+          </legend>
+          <div className="mt-1 flex gap-2">
+            {Object.entries(SHAPES).map(([key, s]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setShape(key)}
+                aria-pressed={shape === key}
+                className={`flex items-center gap-2.5 rounded-md border px-3 py-2.5 transition-colors ${
+                  shape === key ? "border-high bg-high/10" : "border-wire hover:border-muted/60"
+                }`}
+              >
+                <span
+                  className={`w-5 ${s.ratio} rounded-[3px] border ${
+                    shape === key ? "border-high/70 bg-high/20" : "border-muted/50"
+                  }`}
+                />
+                <span className="flex flex-col items-start gap-0.5">
+                  <span
+                    className={`font-display text-[13px] font-bold ${
+                      shape === key ? "text-high" : "text-chalk"
+                    }`}
+                  >
+                    {s.label}
+                  </span>
+                  <span className="font-mono text-[10px] text-muted">{s.hint}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
         <div>
           <div className="flex items-baseline justify-between">
             <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
@@ -159,6 +207,7 @@ export default function NewList() {
                 index={i}
                 total={items.length}
                 isRanked={isRanked}
+                shape={shape}
                 onChange={updateItem}
                 onMove={moveItem}
                 onRemove={removeItem}

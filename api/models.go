@@ -37,6 +37,13 @@ type ListItem struct {
 	Rank  int     `json:"rank"`
 	Title string  `json:"title"`
 	Note  *string `json:"note"`
+
+	// Where the picture is now, and where it came from. Source and ref are
+	// what let a link be swapped for an uploaded or provider-sourced image
+	// later without anything downstream noticing.
+	ImageURL    *string `json:"image_url"`
+	ImageSource *string `json:"image_source"`
+	ImageRef    *string `json:"image_ref"`
 }
 
 // List serves both shapes the UI needs, distinguished by which item slice is
@@ -48,6 +55,7 @@ type List struct {
 	Slug         string     `json:"slug"`
 	Description  *string    `json:"description"`
 	IsRanked     bool       `json:"is_ranked"`
+	ImageShape   string     `json:"image_shape"`
 	ItemCount    int        `json:"item_count"`
 	CommentCount int        `json:"comment_count"`
 	CreatedAt    time.Time  `json:"created_at"`

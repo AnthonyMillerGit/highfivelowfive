@@ -15,3 +15,6 @@ web/.vite/
 
 # seeded design canvas — 2.4MB of bundled editor, rebuilt from the .dc.html sources
 design/high-five-low-five-screens.html
+
+# throwaway demo artwork for judging the image layout
+web/public/demo/

@@ -1,4 +1,5 @@
 import { marker } from "../lib/format";
+import ItemImage from "./ItemImage";
 
 function IconButton({ label, onClick, disabled, children }) {
   return (
@@ -29,13 +30,22 @@ const arrow = (points) => (
  *  drop: it needs no library, works from the keyboard, and is announced to
  *  screen readers — drag would be none of those without real work. */
 export default function ItemRow({
-  item, index, total, isRanked, onChange, onMove, onRemove,
+  item, index, total, isRanked, shape, onChange, onMove, onRemove,
 }) {
   return (
     <li className="flex items-start gap-3 border-b border-wire py-3">
       <span className="mt-2.5 w-7 shrink-0 font-mono text-xs tabular-nums text-muted">
         {marker(isRanked, index + 1)}
       </span>
+
+      {/* The thumbnail updates as the link is typed, so a wrong URL is
+          obvious immediately rather than after publishing. */}
+      <ItemImage
+        src={item.image}
+        title={item.title}
+        shape={shape}
+        className="w-14"
+      />
 
       <div className="flex grow flex-col gap-2">
         <input
@@ -54,6 +64,16 @@ export default function ItemRow({
           maxLength={1000}
           className="w-full rounded-md border border-transparent bg-transparent px-3 py-1.5
                      text-sm text-muted placeholder:text-muted/50 transition-colors
+                     hover:border-wire focus:border-high focus:text-chalk focus:outline-none"
+        />
+        <input
+          value={item.image}
+          onChange={(e) => onChange(item.key, "image", e.target.value)}
+          placeholder="Image link (optional)"
+          maxLength={2048}
+          inputMode="url"
+          className="w-full rounded-md border border-transparent bg-transparent px-3 py-1.5
+                     font-mono text-xs text-muted placeholder:text-muted/50 transition-colors
                      hover:border-wire focus:border-high focus:text-chalk focus:outline-none"
         />
       </div>

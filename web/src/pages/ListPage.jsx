@@ -6,6 +6,7 @@ import AppShell from "../components/AppShell";
 import Spinner from "../components/Spinner";
 import Comments from "../components/Comments";
 import Monogram from "../components/Monogram";
+import ItemImage from "../components/ItemImage";
 
 export default function ListPage() {
   const { username, slug } = useParams();
@@ -79,15 +80,21 @@ export default function ListPage() {
 
       <ol className="mt-8 flex flex-col border-t border-wire">
         {list.items.map((item) => (
-          <li key={item.id} className="flex gap-5 border-b border-wire py-[18px]">
+          <li key={item.id} className="flex items-start gap-5 border-b border-wire py-[18px]">
             <span
-              className={`w-8 shrink-0 font-mono text-xl font-bold tabular-nums ${
+              className={`w-8 shrink-0 pt-1 font-mono text-xl font-bold tabular-nums ${
                 list.is_ranked && item.rank === 1 ? "text-high" : "text-muted"
               }`}
             >
               {marker(list.is_ranked, item.rank)}
             </span>
-            <span className="flex flex-col gap-1.5">
+            <ItemImage
+              src={item.image_url}
+              title={item.title}
+              shape={list.image_shape}
+              className="w-20"
+            />
+            <span className="flex flex-col gap-1.5 pt-1">
               <span className="font-display text-xl font-bold text-chalk">
                 {item.title}
               </span>
