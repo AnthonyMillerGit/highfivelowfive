@@ -1,0 +1,14 @@
+# secrets
+.env
+
+# go
+api/bin/
+api/highfivelowfive
+
+# node
+node_modules/
+web/dist/
+web/.vite/
+
+# os
+.DS_Store

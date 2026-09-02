@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+/* Tailwind 4 reads design tokens straight from CSS. Everything below becomes
+   a utility class: --color-high generates bg-high / text-high / border-high. */
+@theme {
+  --color-ink:     #17132A;  /* ground: deep indigo, a late-night studio */
+  --color-raised:  #211C3B;  /* cards sitting on the ground */
+  --color-wire:    #372F5C;  /* hairlines and borders */
+  --color-muted:   #9C93BC;  /* secondary text */
+  --color-chalk:   #F2EDE4;  /* primary text, warm not clinical */
+  --color-high:    #FFC24B;  /* the high five */
+  --color-low:     #FF6B8A;  /* the low five */
+
+  --font-display: "Syne", ui-sans-serif, system-ui, sans-serif;
+  --font-body:    "Karla", ui-sans-serif, system-ui, sans-serif;
+  --font-mono:    "Space Mono", ui-monospace, monospace;
+}
+
+html {
+  background-color: var(--color-ink);
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--color-chalk);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* One visible focus treatment for the whole app, in the brand gold. */
+:focus-visible {
+  outline: 2px solid var(--color-high);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
