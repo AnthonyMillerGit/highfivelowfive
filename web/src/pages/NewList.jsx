@@ -1,28 +1,76 @@
 import { useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
+import { TEMPLATES, templateById, customTemplate } from "../lib/templates";
 import AppShell from "../components/AppShell";
 import Field from "../components/Field";
 import Button from "../components/Button";
 import Alert from "../components/Alert";
 import ItemRow from "../components/ItemRow";
+import TemplateCard from "../components/TemplateCard";
+import CustomTemplateCard from "../components/CustomTemplateCard";
 
 const blank = (key) => ({ key, title: "", note: "" });
 
+/**
+ * Two steps: pick a shape, then fill it in.
+ *
+ * The template lives in the URL rather than in component state so the back
+ * button returns to the chooser, and so a half-built list survives a reload
+ * landing on the right shape.
+ */
 export default function NewList() {
+  const [params] = useSearchParams();
+  const id = params.get("template");
+
+  if (!id) return <TemplateChooser />;
+
+  const template =
+    id === "custom"
+      ? customTemplate(params.get("count"), params.get("ranked") !== "0")
+      : templateById(id);
+
+  // Keyed on the whole shape so switching rebuilds the form from scratch
+  // rather than trying to reconcile a 10-row list into a 4-row one.
+  return <Builder key={`${id}-${template.count}-${template.ranked}`} template={template} />;
+}
+
+function TemplateChooser() {
+  return (
+    <AppShell wide>
+      <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted">New list</p>
+      <h1 className="mt-2 font-display text-4xl font-extrabold">Pick a shape</h1>
+      <p className="mt-3 max-w-lg leading-relaxed text-muted">
+        A starting point, not a rule. Add rows, remove them, or change your mind
+        about the order once you are in.
+      </p>
+
+      <div className="mt-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {TEMPLATES.map((t) => (
+          <TemplateCard key={t.id} template={t} />
+        ))}
+        <CustomTemplateCard />
+      </div>
+    </AppShell>
+  );
+}
+
+function Builder({ template }) {
   const { user } = useAuth();
   const navigate = useNavigate();
 
   // Rows need identities that survive reordering. Using the array index as a
   // React key would make the inputs lose focus and swap values mid-typing when
   // rows move, so every row carries a key that never changes.
-  const nextKey = useRef(3);
-  const [items, setItems] = useState([blank(0), blank(1), blank(2)]);
+  const nextKey = useRef(template.count);
+  const [items, setItems] = useState(() =>
+    Array.from({ length: template.count }, (_, i) => blank(i))
+  );
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [isRanked, setIsRanked] = useState(true);
+  const [isRanked, setIsRanked] = useState(template.ranked);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
 
@@ -83,7 +131,17 @@ export default function NewList() {
 
   return (
     <AppShell>
-      <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted">New list</p>
+      <div className="flex items-baseline justify-between gap-4">
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted">
+          {template.name}
+        </p>
+        <Link
+          to="/new"
+          className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted transition-colors hover:text-chalk"
+        >
+          Change shape
+        </Link>
+      </div>
       <h1 className="mt-2 font-display text-3xl font-extrabold">
         What are we ranking?
       </h1>
@@ -96,7 +154,7 @@ export default function NewList() {
           value={title}
           maxLength={200}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Top 5 horror movies that hold up"
+          placeholder={template.titlePlaceholder}
         />
 
         <Field
