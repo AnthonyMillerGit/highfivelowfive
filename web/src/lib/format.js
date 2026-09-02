@@ -19,3 +19,23 @@ export function fullDate(iso) {
 export function marker(isRanked, rank) {
   return isRanked ? String(rank).padStart(2, "0") : "•";
 }
+
+/** "just now" / "12m" / "3h" / "Yesterday" / "Aug 30, 2026".
+ *  Comments are usually recent, so exact timestamps are noise — but anything
+ *  older than a week is better shown as a date than as "43d". */
+export function relativeTime(iso) {
+  const seconds = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (seconds < 60) return "just now";
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days}d`;
+
+  return fullDate(iso);
+}

@@ -208,7 +208,7 @@ func (a *App) handleUserLists(w http.ResponseWriter, r *http.Request) {
 		SELECT l.id, l.title, l.slug, l.description, l.is_ranked, l.created_at,
 		       u.username, u.display_name,
 		       (SELECT COUNT(*) FROM list_items li WHERE li.list_id = l.id),
-		       (SELECT COUNT(*) FROM comments   c  WHERE c.list_id  = l.id)
+		       (SELECT COUNT(*) FROM comments   c  WHERE c.list_id  = l.id AND c.deleted_at IS NULL)
 		FROM lists l
 		JOIN users u ON u.id = l.user_id
 		WHERE u.username = $1 AND l.is_public
@@ -311,7 +311,7 @@ func (a *App) handleList(w http.ResponseWriter, r *http.Request) {
 	err := a.DB.QueryRow(r.Context(), `
 		SELECT l.id, l.title, l.slug, l.description, l.is_ranked, l.created_at,
 		       u.username, u.display_name,
-		       (SELECT COUNT(*) FROM comments c WHERE c.list_id = l.id)
+		       (SELECT COUNT(*) FROM comments c WHERE c.list_id = l.id AND c.deleted_at IS NULL)
 		FROM lists l
 		JOIN users u ON u.id = l.user_id
 		WHERE u.username = $1 AND l.slug = $2 AND l.is_public`,

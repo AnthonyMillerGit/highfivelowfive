@@ -50,3 +50,15 @@ type List struct {
 	Preview      []ListItem `json:"preview,omitempty"`
 	Items        []ListItem `json:"items,omitempty"`
 }
+
+// Comment is one entry in a list's discussion. Threading is one level deep:
+// a reply always hangs off a top-level comment, never off another reply.
+type Comment struct {
+	ID        int64     `json:"id"`
+	Body      *string   `json:"body"` // null once removed
+	Deleted   bool      `json:"deleted"`
+	CreatedAt time.Time `json:"created_at"`
+	Author    *Author   `json:"author"` // null once removed
+	ParentID  *int64    `json:"parent_id"`
+	Replies   []Comment `json:"replies"`
+}

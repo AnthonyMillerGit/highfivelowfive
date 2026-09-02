@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import AppShell from "../components/AppShell";
 import ListCard from "../components/ListCard";
 import Spinner from "../components/Spinner";
+import Monogram from "../components/Monogram";
 
 /** Serves both "/" (your own lists) and "/u/:username" (anyone's). One
  *  component because the page is the same page — only the empty state and the
@@ -58,9 +59,7 @@ export default function Profile() {
   return (
     <AppShell wide>
       <div className="flex items-start gap-6">
-        <span className="flex h-[88px] w-[88px] shrink-0 items-center justify-center rounded-lg border border-wire bg-raised font-display text-[38px] font-extrabold text-high">
-          {profile.username[0].toUpperCase()}
-        </span>
+        <Monogram username={profile.username} size="lg" />
 
         <div className="flex grow flex-col gap-2">
           <div className="flex items-baseline gap-3">

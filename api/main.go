@@ -55,12 +55,15 @@ func main() {
 	r.Get("/api/users/{username}", app.handleProfile)
 	r.Get("/api/users/{username}/lists", app.handleUserLists)
 	r.Get("/api/users/{username}/lists/{slug}", app.handleList)
+	r.Get("/api/lists/{listID}/comments", app.handleListComments)
 
 	// Protected: everything in this group runs RequireAuth first.
 	r.Group(func(r chi.Router) {
 		r.Use(app.RequireAuth)
 		r.Get("/api/auth/me", app.handleMe)
 		r.Post("/api/lists", app.handleCreateList)
+		r.Post("/api/lists/{listID}/comments", app.handleCreateComment)
+		r.Delete("/api/comments/{commentID}", app.handleDeleteComment)
 	})
 
 	srv := &http.Server{

@@ -4,6 +4,8 @@ import { api } from "../lib/api";
 import { fullDate, marker } from "../lib/format";
 import AppShell from "../components/AppShell";
 import Spinner from "../components/Spinner";
+import Comments from "../components/Comments";
+import Monogram from "../components/Monogram";
 
 export default function ListPage() {
   const { username, slug } = useParams();
@@ -46,9 +48,7 @@ export default function ListPage() {
         to={`/u/${list.author.username}`}
         className="flex items-center gap-3 rounded-sm"
       >
-        <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-wire bg-raised font-display text-[17px] font-extrabold text-high">
-          {list.author.username[0].toUpperCase()}
-        </span>
+        <Monogram username={list.author.username} size="md" />
         <span className="flex flex-col gap-0.5">
           {list.author.display_name && (
             <span className="font-display text-[15px] font-bold text-chalk">
@@ -99,10 +99,7 @@ export default function ListPage() {
         ))}
       </ol>
 
-      {/* Comments land in the next step; the count is already real. */}
-      <p className="mt-8 font-mono text-[11px] uppercase tracking-[0.2em] text-muted">
-        {list.comment_count} {list.comment_count === 1 ? "comment" : "comments"}
-      </p>
+      <Comments listId={list.id} />
     </AppShell>
   );
 }
