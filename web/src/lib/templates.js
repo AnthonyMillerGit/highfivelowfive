@@ -89,7 +89,7 @@ export function resolveTemplate(id, params) {
         id,
         name: "Your own labels",
         ranked: false,
-        titlePlaceholder: "Best of each era",
+        titlePlaceholder: "The best thing to eat at each meal",
         rows: lines.length
           ? lines.map((label) => ({ label: label.slice(0, 40) }))
           : [{ label: null }, { label: null }, { label: null }],

@@ -27,8 +27,14 @@ function Shell({ name, hint, children, onStart, dashed = false }) {
   );
 }
 
-/** Rows drawn as bars, marked the way the real list will be. */
-export function ShapePreview({ marks, ranked }) {
+/**
+ * Rows drawn as bars, marked the way the real list will be.
+ *
+ * `empty` swaps the solid bars for dashed slots. That matters on the card
+ * where you type the row names yourself: without it there is no way to see
+ * which half you are providing and which half you fill in later.
+ */
+export function ShapePreview({ marks, ranked, empty = false, wideMarks = false }) {
   const shown = marks.slice(0, 5);
   const extra = marks.length - shown.length;
 
@@ -36,19 +42,33 @@ export function ShapePreview({ marks, ranked }) {
     <div className="flex flex-col gap-[5px]" aria-hidden="true">
       {shown.map((mark, i) => (
         <div key={i} className="flex items-center gap-2">
-          <span className="w-7 shrink-0 truncate font-mono text-[9px] tabular-nums text-muted">
+          <span
+            className={`shrink-0 truncate font-mono text-[9px] tabular-nums text-muted ${
+              wideMarks ? "w-16" : "w-7"
+            }`}
+          >
             {mark}
           </span>
-          <span
-            className={`h-[5px] rounded-full ${
-              ranked && i === 0 ? "bg-high/70" : "bg-wire"
-            }`}
-            style={{ width: `${70 - i * 9}%` }}
-          />
+          {empty ? (
+            <span className="h-[9px] grow rounded-sm border border-dashed border-wire" />
+          ) : (
+            <span
+              className={`h-[5px] rounded-full ${
+                ranked && i === 0 ? "bg-high/70" : "bg-wire"
+              }`}
+              style={{ width: `${70 - i * 9}%` }}
+            />
+          )}
         </div>
       ))}
       {extra > 0 && (
-        <span className="mt-0.5 pl-9 font-mono text-[9px] text-muted">+{extra} more</span>
+        <span
+          className={`mt-0.5 font-mono text-[9px] text-muted ${
+            wideMarks ? "pl-[72px]" : "pl-9"
+          }`}
+        >
+          +{extra} more
+        </span>
       )}
     </div>
   );
@@ -162,27 +182,41 @@ export function YearCard() {
 
 export function LabelsCard() {
   const navigate = useNavigate();
-  const [text, setText] = useState("Original\nPrequel\nSequel");
+  // Meals, not "Original / Prequel / Sequel". Nobody mistakes Breakfast for
+  // an answer, so the example itself shows that these are the buckets and
+  // the answers come later.
+  const [text, setText] = useState("Breakfast\nLunch\nDinner");
 
   const marks = text.split("\n").map((l) => l.trim()).filter(Boolean);
 
   return (
     <Shell
-      name="Your own labels"
-      hint="One per line — you name the rows"
+      name="Your own rows"
+      hint="You name the rows, fill them in next"
       dashed
       onStart={() => navigate(`/new?template=labels&labels=${encodeURIComponent(text)}`)}
     >
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        rows={4}
-        aria-label="Row labels, one per line"
+        rows={3}
+        aria-label="Row names, one per line"
+        placeholder={"Breakfast\nLunch\nDinner"}
         className="w-full resize-y rounded border border-wire bg-ink px-2 py-1.5 font-mono
-                   text-[11px] leading-relaxed text-chalk focus:border-high focus:outline-none"
+                   text-[11px] leading-relaxed text-chalk placeholder:text-muted/50
+                   focus:border-high focus:outline-none"
       />
-      <div className="mt-3">
-        <ShapePreview marks={marks.length ? marks : ["•", "•", "•"]} ranked={false} />
+
+      <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
+        Becomes
+      </p>
+      <div className="mt-1.5">
+        <ShapePreview
+          marks={marks.length ? marks : ["Breakfast", "Lunch", "Dinner"]}
+          ranked={false}
+          empty
+          wideMarks
+        />
       </div>
     </Shell>
   );
