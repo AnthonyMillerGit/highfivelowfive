@@ -42,6 +42,15 @@ export default function ListPage() {
     );
   }
 
+  // A label used more than once is a group heading — several things share a
+  // tier. A label used once is the row's own name, like a year, and reads
+  // better inline. The data tells us which without another column.
+  const counts = list.items.reduce((acc, i) => {
+    if (i.label) acc[i.label] = (acc[i.label] ?? 0) + 1;
+    return acc;
+  }, {});
+  const grouped = Object.values(counts).some((n) => n > 1);
+
   return (
     <AppShell>
       <Link
@@ -77,29 +86,73 @@ export default function ListPage() {
         <span>{fullDate(list.created_at)}</span>
       </div>
 
-      <ol className="mt-8 flex flex-col border-t border-wire">
-        {list.items.map((item) => (
-          <li key={item.id} className="flex gap-5 border-b border-wire py-[18px]">
-            <span
-              className={`w-16 shrink-0 font-mono text-xl font-bold tabular-nums ${
-                list.is_ranked && item.rank === 1 ? "text-high" : "text-muted"
-              }`}
-            >
-              {marker(list.is_ranked, item.rank, item.label)}
-            </span>
-            <span className="flex flex-col gap-1.5">
-              <span className="font-display text-xl font-bold text-chalk">
-                {item.title}
-              </span>
-              {item.note && (
-                <span className="text-sm leading-relaxed text-muted">{item.note}</span>
-              )}
-            </span>
-          </li>
-        ))}
-      </ol>
+      {grouped ? <GroupedItems list={list} /> : <FlatItems list={list} />}
 
       <Comments listId={list.id} />
     </AppShell>
+  );
+}
+
+/** Ordinary rows: marker on the left, item on the right. */
+function FlatItems({ list }) {
+  return (
+    <ol className="mt-8 flex flex-col border-t border-wire">
+      {list.items.map((item) => (
+        <li key={item.id} className="flex gap-5 border-b border-wire py-[18px]">
+          <span
+            className={`w-16 shrink-0 font-mono text-xl font-bold tabular-nums ${
+              list.is_ranked && item.rank === 1 ? "text-high" : "text-muted"
+            }`}
+          >
+            {marker(list.is_ranked, item.rank, item.label)}
+          </span>
+          <span className="flex flex-col gap-1.5">
+            <span className="font-display text-xl font-bold text-chalk">{item.title}</span>
+            {item.note && (
+              <span className="text-sm leading-relaxed text-muted">{item.note}</span>
+            )}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** A tier list: the label is a heading and everything under it belongs to it. */
+function GroupedItems({ list }) {
+  const order = [];
+  const byLabel = new Map();
+
+  for (const item of list.items) {
+    const key = item.label ?? "";
+    if (!byLabel.has(key)) {
+      byLabel.set(key, []);
+      order.push(key);
+    }
+    byLabel.get(key).push(item);
+  }
+
+  return (
+    <div className="mt-8 flex flex-col gap-px">
+      {order.map((label) => (
+        <div key={label} className="flex gap-5 border-t border-wire py-5">
+          <span className="w-16 shrink-0 font-display text-2xl font-extrabold text-high">
+            {label || "—"}
+          </span>
+          <ul className="flex grow flex-col gap-2.5">
+            {byLabel.get(label).map((item) => (
+              <li key={item.id} className="flex flex-col gap-1">
+                <span className="font-display text-lg font-bold text-chalk">
+                  {item.title}
+                </span>
+                {item.note && (
+                  <span className="text-sm leading-relaxed text-muted">{item.note}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
   );
 }

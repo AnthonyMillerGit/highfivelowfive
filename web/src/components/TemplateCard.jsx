@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MAX_ITEMS } from "../lib/templates";
+import { MAX_ITEMS, MAX_TIERS, tierLabels } from "../lib/templates";
 
 const clamp = (n, lo = 1, hi = MAX_ITEMS) => Math.min(Math.max(n, lo), hi);
 
@@ -195,6 +195,44 @@ export function SimpleCard({ id, name, hint, marks }) {
   return (
     <Shell name={name} hint={hint} onStart={() => navigate(`/new?template=${id}`)}>
       <ShapePreview marks={marks} ranked={false} />
+    </Shell>
+  );
+}
+
+/* ---------------------------------------------------------------- tier */
+
+export function TierCard() {
+  const navigate = useNavigate();
+  const [tiers, setTiers] = useState(6);
+
+  const labels = tierLabels(tiers);
+  const step = (d) => setTiers((n) => Math.min(Math.max(n + d, 2), MAX_TIERS));
+
+  return (
+    <Shell
+      name="Tier list"
+      hint="S down to wherever you stop"
+      onStart={() => navigate(`/new?template=tier&tiers=${labels.length}`)}
+    >
+      <div className="flex items-center gap-2">
+        <button type="button" aria-label="Fewer tiers" onClick={() => step(-1)}
+                className="h-7 w-7 rounded border border-wire text-muted transition-colors hover:border-muted/60 hover:text-chalk">
+          &minus;
+        </button>
+        <span className="w-8 text-center font-mono text-sm text-chalk">{labels.length}</span>
+        <button type="button" aria-label="More tiers" onClick={() => step(1)}
+                className="h-7 w-7 rounded border border-wire text-muted transition-colors hover:border-muted/60 hover:text-chalk">
+          +
+        </button>
+        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">tiers</span>
+      </div>
+
+      <p className="mt-3 font-mono text-[13px] tracking-[0.22em] text-high">
+        {labels.join(" ")}
+      </p>
+      <p className="mt-2 font-mono text-[10px] text-muted">
+        As many entries per tier as you like
+      </p>
     </Shell>
   );
 }

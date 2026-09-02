@@ -3,16 +3,19 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { resolveTemplate } from "../lib/templates";
+import { marker } from "../lib/format";
 import AppShell from "../components/AppShell";
 import Field from "../components/Field";
 import Button from "../components/Button";
 import Alert from "../components/Alert";
 import ItemRow from "../components/ItemRow";
+import TierGroups from "../components/TierGroups";
 import {
   NumberedCard,
   YearCard,
   LabelsCard,
   SimpleCard,
+  TierCard,
 } from "../components/TemplateCard";
 
 const blank = (key, label = null) => ({ key, label, title: "", note: "" });
@@ -56,12 +59,7 @@ function TemplateChooser() {
           marks={["•", "•", "•", "•"]}
         />
         <YearCard />
-        <SimpleCard
-          id="tier"
-          name="Tier list"
-          hint="S down to F"
-          marks={["S", "A", "B", "C", "D", "F"]}
-        />
+        <TierCard />
         <LabelsCard />
       </div>
     </AppShell>
@@ -92,22 +90,29 @@ function Builder({ template }) {
     );
   }
 
-  function moveItem(index, delta) {
+  /** Swap two rows by their position in the flat array. Callers work out
+   *  which two — in a tier list that is the neighbour inside the same tier,
+   *  which is not the neighbour in the array. */
+  function swap(a, b) {
     setItems((prev) => {
-      const target = index + delta;
-      if (target < 0 || target >= prev.length) return prev;
+      if (a < 0 || b < 0 || a >= prev.length || b >= prev.length) return prev;
       const next = [...prev];
-      [next[index], next[target]] = [next[target], next[index]];
+      [next[a], next[b]] = [next[b], next[a]];
       return next;
     });
+  }
+
+  /** Move a row to a different tier. */
+  function relabel(key, label) {
+    setItems((prev) => prev.map((it) => (it.key === key ? { ...it, label } : it)));
   }
 
   function removeItem(key) {
     setItems((prev) => prev.filter((it) => it.key !== key));
   }
 
-  function addItem() {
-    setItems((prev) => [...prev, blank(nextKey.current++)]);
+  function addItem(label = null) {
+    setItems((prev) => [...prev, blank(nextKey.current++, label)]);
   }
 
   async function handleSubmit(e) {
@@ -116,7 +121,16 @@ function Builder({ template }) {
 
     // Trailing blank rows are the normal way people leave a builder, so drop
     // them rather than making the server reject the whole list.
-    const filled = items
+    // Rows can be re-tiered in any order, so group them before saving. Rank
+    // then runs cleanly down the tiers instead of zig-zagging between them.
+    const ordered = template.groups
+      ? [...items].sort(
+          (a, b) =>
+            template.groups.indexOf(a.label) - template.groups.indexOf(b.label)
+        )
+      : items;
+
+    const filled = ordered
       .map((it) => ({
         title: it.title.trim(),
         note: it.note.trim(),
@@ -229,31 +243,48 @@ function Builder({ template }) {
             </span>
           </div>
 
-          <ol className="mt-2 border-t border-wire">
-            {items.map((item, i) => (
-              <ItemRow
-                key={item.key}
-                item={item}
-                index={i}
-                total={items.length}
-                isRanked={isRanked}
-                onChange={updateItem}
-                onMove={moveItem}
-                onRemove={removeItem}
-              />
-            ))}
-          </ol>
+          {template.groups ? (
+            <TierGroups
+              groups={template.groups}
+              items={items}
+              onChange={updateItem}
+              onRelabel={relabel}
+              onSwap={swap}
+              onRemove={removeItem}
+              onAdd={addItem}
+              full={items.length >= 100}
+            />
+          ) : (
+            <>
+              <ol className="mt-2 border-t border-wire">
+                {items.map((item, i) => (
+                  <ItemRow
+                    key={item.key}
+                    item={item}
+                    marker={marker(isRanked, i + 1, item.label)}
+                    onChange={updateItem}
+                    canUp={i > 0}
+                    canDown={i < items.length - 1}
+                    onUp={() => swap(i, i - 1)}
+                    onDown={() => swap(i, i + 1)}
+                    onRemove={removeItem}
+                    canRemove={items.length > 1}
+                  />
+                ))}
+              </ol>
 
-          <button
-            type="button"
-            onClick={addItem}
-            disabled={items.length >= 100}
-            className="mt-4 w-full rounded-md border border-dashed border-wire py-2.5
-                       font-display text-[13px] font-bold text-muted transition-colors
-                       hover:border-muted/60 hover:text-chalk disabled:opacity-40"
-          >
-            Add item
-          </button>
+              <button
+                type="button"
+                onClick={() => addItem()}
+                disabled={items.length >= 100}
+                className="mt-4 w-full rounded-md border border-dashed border-wire py-2.5
+                           font-display text-[13px] font-bold text-muted transition-colors
+                           hover:border-muted/60 hover:text-chalk disabled:opacity-40"
+              >
+                Add item
+              </button>
+            </>
+          )}
         </div>
 
         <div className="flex justify-end">

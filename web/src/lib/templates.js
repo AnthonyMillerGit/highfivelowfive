@@ -1,4 +1,14 @@
 export const MAX_ITEMS = 100;
+export const MAX_TIERS = 12;
+
+const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+/** S sits above A, then the alphabet runs on: S A B C, or S through I.
+ *  How far it runs is the author's call. */
+export function tierLabels(count) {
+  const n = Math.min(Math.max(Number.parseInt(count, 10) || 6, 2), MAX_TIERS);
+  return ["S", ...LETTERS.slice(0, n - 1).split("")];
+}
 
 const clamp = (n, lo, hi) => Math.min(Math.max(n, lo), hi);
 const int = (v, fallback) => {
@@ -51,15 +61,18 @@ export function resolveTemplate(id, params) {
     }
 
     case "tier": {
-      // S is the tier above A — the convention comes from Japanese ranking
-      // scales and everyone who has seen a tier list already knows it.
-      const tiers = ["S", "A", "B", "C", "D", "F"];
+      const tiers = tierLabels(get("tiers", 6));
       return {
         id,
         name: "Tier list",
         ranked: false,
         titlePlaceholder: "Every Zelda game, tiered",
+        // A tier holds as many things as you put in it, so the label is a
+        // group rather than a row. Each starts with one empty slot.
         rows: tiers.map((label) => ({ label })),
+        // Present means "rows are grouped under these labels, and a row may
+        // be moved between them".
+        groups: tiers,
       };
     }
 

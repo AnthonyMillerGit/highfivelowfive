@@ -1,4 +1,3 @@
-import { marker } from "../lib/format";
 
 function IconButton({ label, onClick, disabled, children }) {
   return (
@@ -28,14 +27,39 @@ const arrow = (points) => (
 /** One editable row in the builder. Reordering is buttons rather than drag and
  *  drop: it needs no library, works from the keyboard, and is announced to
  *  screen readers — drag would be none of those without real work. */
+/**
+ * One editable row.
+ *
+ * The caller decides what the row's marker means and where it can move, so the
+ * same row works in a flat list (move within the whole list) and in a tier
+ * list (move within your tier, or change tier from the dropdown).
+ */
 export default function ItemRow({
-  item, index, total, isRanked, onChange, onMove, onRemove,
+  item, marker, groups, onChange, onRelabel,
+  canUp, canDown, onUp, onDown, onRemove, canRemove,
 }) {
   return (
     <li className="flex items-start gap-3 border-b border-wire py-3">
-      <span className="mt-2.5 w-12 shrink-0 truncate font-mono text-xs tabular-nums text-muted">
-        {marker(isRanked, index + 1, item.label)}
-      </span>
+      {groups ? (
+        // In a tier list the marker is the decision, not a label — so it is a
+        // control. Re-tiering is the main thing people do after typing.
+        <select
+          value={item.label ?? groups[0]}
+          onChange={(e) => onRelabel(item.key, e.target.value)}
+          aria-label="Tier"
+          className="mt-1.5 w-12 shrink-0 rounded border border-wire bg-ink px-1 py-1
+                     text-center font-mono text-xs text-chalk
+                     hover:border-muted/60 focus:border-high focus:outline-none"
+        >
+          {groups.map((g) => (
+            <option key={g} value={g}>{g}</option>
+          ))}
+        </select>
+      ) : (
+        <span className="mt-2.5 w-12 shrink-0 truncate font-mono text-xs tabular-nums text-muted">
+          {marker}
+        </span>
+      )}
 
       <div className="flex grow flex-col gap-2">
         <input
@@ -59,13 +83,13 @@ export default function ItemRow({
       </div>
 
       <div className="mt-1 flex shrink-0 gap-1.5">
-        <IconButton label="Move up" onClick={() => onMove(index, -1)} disabled={index === 0}>
+        <IconButton label="Move up" onClick={onUp} disabled={!canUp}>
           {arrow("18 15 12 9 6 15")}
         </IconButton>
-        <IconButton label="Move down" onClick={() => onMove(index, 1)} disabled={index === total - 1}>
+        <IconButton label="Move down" onClick={onDown} disabled={!canDown}>
           {arrow("6 9 12 15 18 9")}
         </IconButton>
-        <IconButton label="Remove item" onClick={() => onRemove(item.key)} disabled={total === 1}>
+        <IconButton label="Remove item" onClick={() => onRemove(item.key)} disabled={!canRemove}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                strokeWidth="2" strokeLinecap="round" aria-hidden="true">
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
