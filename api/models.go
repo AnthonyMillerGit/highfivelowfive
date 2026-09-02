@@ -19,12 +19,17 @@ type Author struct {
 	DisplayName *string `json:"display_name"`
 }
 
-// Profile is a user's public page header.
+// Profile is a user's public page header. IsFollowing and IsSelf are answered
+// relative to whoever is asking, so they are false for a signed-out visitor.
 type Profile struct {
-	Username    string  `json:"username"`
-	DisplayName *string `json:"display_name"`
-	Bio         *string `json:"bio"`
-	ListCount   int     `json:"list_count"`
+	Username       string  `json:"username"`
+	DisplayName    *string `json:"display_name"`
+	Bio            *string `json:"bio"`
+	ListCount      int     `json:"list_count"`
+	FollowerCount  int     `json:"follower_count"`
+	FollowingCount int     `json:"following_count"`
+	IsFollowing    bool    `json:"is_following"`
+	IsSelf         bool    `json:"is_self"`
 }
 
 type ListItem struct {

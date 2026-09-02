@@ -6,6 +6,7 @@ import AppShell from "../components/AppShell";
 import ListCard from "../components/ListCard";
 import Spinner from "../components/Spinner";
 import Monogram from "../components/Monogram";
+import FollowButton from "../components/FollowButton";
 
 /** Serves both "/" (your own lists) and "/u/:username" (anyone's). One
  *  component because the page is the same page — only the empty state and the
@@ -73,15 +74,36 @@ export default function Profile() {
           {profile.bio && (
             <p className="max-w-xl leading-relaxed text-chalk">{profile.bio}</p>
           )}
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="font-mono text-[15px] font-bold text-chalk">
-              {profile.list_count}
-            </span>
-            <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
-              {profile.list_count === 1 ? "List" : "Lists"}
-            </span>
+          <div className="mt-2 flex gap-7">
+            {[
+              [profile.list_count, profile.list_count === 1 ? "List" : "Lists"],
+              [profile.follower_count, profile.follower_count === 1 ? "Follower" : "Followers"],
+              [profile.following_count, "Following"],
+            ].map(([count, label]) => (
+              <div key={label} className="flex items-baseline gap-1.5">
+                <span className="font-mono text-[15px] font-bold text-chalk">{count}</span>
+                <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
+                  {label}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
+
+        {/* Only shown to a signed-in visitor looking at somebody else. */}
+        {user && !profile.is_self && (
+          <FollowButton
+            username={profile.username}
+            following={profile.is_following}
+            onChange={(following) =>
+              setProfile((prev) => ({
+                ...prev,
+                is_following: following,
+                follower_count: prev.follower_count + (following ? 1 : -1),
+              }))
+            }
+          />
+        )}
       </div>
 
       {lists.length === 0 ? (

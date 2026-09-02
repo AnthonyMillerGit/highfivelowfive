@@ -195,28 +195,24 @@ func uniqueSlug(ctx context.Context, tx pgx.Tx, userID int64, base string) (stri
 
 // ------------------------------------------------------------------ read
 
-// handleUserLists returns one page of a user's list cards.
-//
-// The card needs a preview of its first few items, which is where this kind of
-// endpoint usually becomes N+1: one query for the lists, then another per list
-// for its items. Instead it runs exactly two queries no matter how many cards
-// come back — the second fetches previews for the whole page at once.
-func (a *App) handleUserLists(w http.ResponseWriter, r *http.Request) {
-	username := chi.URLParam(r, "username")
+// listCardSelect is the card shape the profile grid and the feed both render.
+// Both read the same thing, so both build on the same SELECT — otherwise the
+// two drift and a field added for one silently goes missing from the other.
+const listCardSelect = `
+	SELECT l.id, l.title, l.slug, l.description, l.is_ranked, l.created_at,
+	       u.username, u.display_name,
+	       (SELECT COUNT(*) FROM list_items li WHERE li.list_id = l.id),
+	       (SELECT COUNT(*) FROM comments   c  WHERE c.list_id  = l.id AND c.deleted_at IS NULL)
+	FROM lists l
+	JOIN users u ON u.id = l.user_id
+	`
 
-	rows, err := a.DB.Query(r.Context(), `
-		SELECT l.id, l.title, l.slug, l.description, l.is_ranked, l.created_at,
-		       u.username, u.display_name,
-		       (SELECT COUNT(*) FROM list_items li WHERE li.list_id = l.id),
-		       (SELECT COUNT(*) FROM comments   c  WHERE c.list_id  = l.id AND c.deleted_at IS NULL)
-		FROM lists l
-		JOIN users u ON u.id = l.user_id
-		WHERE u.username = $1 AND l.is_public
-		ORDER BY l.created_at DESC
-		LIMIT 50`, username)
+// loadCards runs a listCardSelect-shaped query and fills in every card's
+// preview. Two queries total, whatever the page size.
+func (a *App) loadCards(ctx context.Context, sql string, args ...any) ([]List, error) {
+	rows, err := a.DB.Query(ctx, sql, args...)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not load lists")
-		return
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -229,8 +225,7 @@ func (a *App) handleUserLists(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(&l.ID, &l.Title, &l.Slug, &l.Description, &l.IsRanked,
 			&l.CreatedAt, &l.Author.Username, &l.Author.DisplayName,
 			&l.ItemCount, &l.CommentCount); err != nil {
-			writeError(w, http.StatusInternalServerError, "could not load lists")
-			return
+			return nil, err
 		}
 		l.Preview = []ListItem{}
 		byID[l.ID] = len(lists)
@@ -238,6 +233,23 @@ func (a *App) handleUserLists(w http.ResponseWriter, r *http.Request) {
 		lists = append(lists, l)
 	}
 	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if err := a.attachPreviews(ctx, ids, byID, lists); err != nil {
+		return nil, err
+	}
+	return lists, nil
+}
+
+func (a *App) handleUserLists(w http.ResponseWriter, r *http.Request) {
+	username := chi.URLParam(r, "username")
+
+	lists, err := a.loadCards(r.Context(), listCardSelect+`
+		WHERE u.username = $1 AND l.is_public
+		ORDER BY l.created_at DESC
+		LIMIT 50`, username)
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not load lists")
 		return
 	}
@@ -259,11 +271,26 @@ func (a *App) handleUserLists(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := a.attachPreviews(r.Context(), ids, byID, lists); err != nil {
-		writeError(w, http.StatusInternalServerError, "could not load lists")
+	writeJSON(w, http.StatusOK, lists)
+}
+
+// handleFeed returns lists from the people the caller follows.
+//
+// This is the whole feed: a join through follows, newest first. There is no
+// activity table and no fan-out on write, because the only event the feed
+// shows is "a list was published" — and lists already carry their own
+// timestamp. That stays true until the feed needs to show something that is
+// not a list.
+func (a *App) handleFeed(w http.ResponseWriter, r *http.Request) {
+	lists, err := a.loadCards(r.Context(), listCardSelect+`
+		JOIN follows f ON f.followee_id = l.user_id
+		WHERE f.follower_id = $1 AND l.is_public
+		ORDER BY l.created_at DESC
+		LIMIT 50`, userIDFrom(r.Context()))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not load the feed")
 		return
 	}
-
 	writeJSON(w, http.StatusOK, lists)
 }
 
@@ -301,8 +328,6 @@ func (a *App) attachPreviews(ctx context.Context, ids []int64, byID map[int64]in
 	}
 	return rows.Err()
 }
-
-// handleList returns one list with every item, for the list page.
 func (a *App) handleList(w http.ResponseWriter, r *http.Request) {
 	username := chi.URLParam(r, "username")
 	slug := chi.URLParam(r, "slug")
@@ -356,15 +381,26 @@ func (a *App) handleList(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleProfile returns the header of a user's public page.
+//
+// Runs behind OptionalAuth, so the caller may be nobody. The viewer-relative
+// answers are computed in the same query rather than fetched separately: a
+// zero user id simply never matches a follows row.
 func (a *App) handleProfile(w http.ResponseWriter, r *http.Request) {
 	username := chi.URLParam(r, "username")
+	viewerID := userIDFrom(r.Context())
 
 	var p Profile
 	err := a.DB.QueryRow(r.Context(), `
 		SELECT u.username, u.display_name, u.bio,
-		       (SELECT COUNT(*) FROM lists l WHERE l.user_id = u.id AND l.is_public)
-		FROM users u WHERE u.username = $1`, username,
-	).Scan(&p.Username, &p.DisplayName, &p.Bio, &p.ListCount)
+		       (SELECT COUNT(*) FROM lists   l WHERE l.user_id     = u.id AND l.is_public),
+		       (SELECT COUNT(*) FROM follows f WHERE f.followee_id = u.id),
+		       (SELECT COUNT(*) FROM follows f WHERE f.follower_id = u.id),
+		       EXISTS (SELECT 1 FROM follows f
+		               WHERE f.follower_id = $2 AND f.followee_id = u.id),
+		       u.id = $2
+		FROM users u WHERE u.username = $1`, username, viewerID,
+	).Scan(&p.Username, &p.DisplayName, &p.Bio, &p.ListCount,
+		&p.FollowerCount, &p.FollowingCount, &p.IsFollowing, &p.IsSelf)
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		writeError(w, http.StatusNotFound, "no such user")

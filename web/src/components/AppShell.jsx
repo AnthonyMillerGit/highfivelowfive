@@ -18,6 +18,12 @@ export default function AppShell({ children, wide = false }) {
           {user ? (
             <div className="flex items-center gap-5">
               <Link
+                to="/feed"
+                className="font-mono text-xs uppercase tracking-[0.14em] text-muted transition-colors hover:text-chalk"
+              >
+                Feed
+              </Link>
+              <Link
                 to="/new"
                 className="rounded-md bg-high px-3.5 py-2 font-display text-[13px] font-bold text-ink transition-colors hover:bg-high/85"
               >

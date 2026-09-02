@@ -52,10 +52,16 @@ func main() {
 	r.Post("/api/auth/login", app.handleLogin)
 
 	// Public reads: profiles and lists are readable without an account.
-	r.Get("/api/users/{username}", app.handleProfile)
 	r.Get("/api/users/{username}/lists", app.handleUserLists)
 	r.Get("/api/users/{username}/lists/{slug}", app.handleList)
 	r.Get("/api/lists/{listID}/comments", app.handleListComments)
+
+	// Public, but better with a viewer: the profile reports whether the caller
+	// already follows this person, which needs a name when there is one.
+	r.Group(func(r chi.Router) {
+		r.Use(app.OptionalAuth)
+		r.Get("/api/users/{username}", app.handleProfile)
+	})
 
 	// Protected: everything in this group runs RequireAuth first.
 	r.Group(func(r chi.Router) {
@@ -64,6 +70,9 @@ func main() {
 		r.Post("/api/lists", app.handleCreateList)
 		r.Post("/api/lists/{listID}/comments", app.handleCreateComment)
 		r.Delete("/api/comments/{commentID}", app.handleDeleteComment)
+		r.Get("/api/feed", app.handleFeed)
+		r.Post("/api/users/{username}/follow", app.handleFollow)
+		r.Delete("/api/users/{username}/follow", app.handleUnfollow)
 	})
 
 	srv := &http.Server{

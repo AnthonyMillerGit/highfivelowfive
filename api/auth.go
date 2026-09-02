@@ -107,3 +107,26 @@ func userIDFrom(ctx context.Context) int64 {
 	id, _ := ctx.Value(userIDKey).(int64)
 	return id
 }
+
+// OptionalAuth identifies the caller when it can, and lets them through either
+// way. Public pages use it to answer viewer-specific questions — "do I follow
+// this person" — without becoming private. Handlers behind it must treat a
+// zero user id as "nobody is signed in" rather than assuming a user.
+func (a *App) OptionalAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token, found := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+		if !found || token == "" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		claims, err := a.parseToken(token)
+		if err != nil {
+			// A bad or expired token is not an error here — it just means we
+			// serve the page as if signed out.
+			next.ServeHTTP(w, r)
+			return
+		}
+		next.ServeHTTP(w, r.WithContext(
+			context.WithValue(r.Context(), userIDKey, claims.UserID)))
+	})
+}
