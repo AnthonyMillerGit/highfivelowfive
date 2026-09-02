@@ -7,14 +7,8 @@ import Field from "../components/Field";
 import Button from "../components/Button";
 import Alert from "../components/Alert";
 import ItemRow from "../components/ItemRow";
-import { SHAPES } from "../components/ItemImage";
 
-/** The picker tags each result with the tab it came from. */
-const sourceOf = (result) => result.source ?? "link";
-
-const blank = (key) => ({
-  key, title: "", note: "", image: "", imageSource: null, imageRef: null,
-});
+const blank = (key) => ({ key, title: "", note: "" });
 
 export default function NewList() {
   const { user } = useAuth();
@@ -29,30 +23,12 @@ export default function NewList() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [isRanked, setIsRanked] = useState(true);
-  const [shape, setShape] = useState("square");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
 
   function updateItem(key, field, value) {
     setItems((prev) =>
       prev.map((it) => (it.key === key ? { ...it, [field]: value } : it))
-    );
-  }
-
-  /** A picked result carries where it came from, so the row remembers its
-   *  provenance and not just the URL. Passing null clears the picture. */
-  function pickImage(key, result) {
-    setItems((prev) =>
-      prev.map((it) =>
-        it.key === key
-          ? {
-              ...it,
-              image: result?.image_url ?? "",
-              imageSource: result ? sourceOf(result) : null,
-              imageRef: result?.ref ?? null,
-            }
-          : it
-      )
     );
   }
 
@@ -81,13 +57,7 @@ export default function NewList() {
     // Trailing blank rows are the normal way people leave a builder, so drop
     // them rather than making the server reject the whole list.
     const filled = items
-      .map((it) => ({
-        title: it.title.trim(),
-        note: it.note.trim(),
-        image: it.image.trim(),
-        imageSource: it.imageSource,
-        imageRef: it.imageRef,
-      }))
+      .map((it) => ({ title: it.title.trim(), note: it.note.trim() }))
       .filter((it) => it.title !== "");
 
     if (!title.trim()) return setError("Give the list a title.");
@@ -101,14 +71,7 @@ export default function NewList() {
           title: title.trim(),
           description: description.trim() || null,
           is_ranked: isRanked,
-          image_shape: shape,
-          items: filled.map((it) => ({
-            title: it.title,
-            note: it.note || null,
-            image_url: it.image || null,
-            image_source: it.imageSource,
-            image_ref: it.imageRef,
-          })),
+          items: filled.map((it) => ({ title: it.title, note: it.note || null })),
         },
       });
       navigate(`/u/${user.username}/${created.slug}`, { replace: true });
@@ -178,43 +141,6 @@ export default function NewList() {
           </div>
         </fieldset>
 
-        {/* Shape is a property of the list because a list is almost always one
-            kind of thing — and mixed ratios make the rows impossible to read. */}
-        <fieldset className="flex flex-col gap-2">
-          <legend className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
-            Picture shape
-          </legend>
-          <div className="mt-1 flex gap-2">
-            {Object.entries(SHAPES).map(([key, s]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setShape(key)}
-                aria-pressed={shape === key}
-                className={`flex items-center gap-2.5 rounded-md border px-3 py-2.5 transition-colors ${
-                  shape === key ? "border-high bg-high/10" : "border-wire hover:border-muted/60"
-                }`}
-              >
-                <span
-                  className={`w-5 ${s.ratio} rounded-[3px] border ${
-                    shape === key ? "border-high/70 bg-high/20" : "border-muted/50"
-                  }`}
-                />
-                <span className="flex flex-col items-start gap-0.5">
-                  <span
-                    className={`font-display text-[13px] font-bold ${
-                      shape === key ? "text-high" : "text-chalk"
-                    }`}
-                  >
-                    {s.label}
-                  </span>
-                  <span className="font-mono text-[10px] text-muted">{s.hint}</span>
-                </span>
-              </button>
-            ))}
-          </div>
-        </fieldset>
-
         <div>
           <div className="flex items-baseline justify-between">
             <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
@@ -233,9 +159,7 @@ export default function NewList() {
                 index={i}
                 total={items.length}
                 isRanked={isRanked}
-                shape={shape}
                 onChange={updateItem}
-                onPickImage={pickImage}
                 onMove={moveItem}
                 onRemove={removeItem}
               />

@@ -21,18 +21,14 @@ const (
 )
 
 type createItemRequest struct {
-	Title       string  `json:"title"`
-	Note        *string `json:"note"`
-	ImageURL    *string `json:"image_url"`
-	ImageSource *string `json:"image_source"`
-	ImageRef    *string `json:"image_ref"`
+	Title string  `json:"title"`
+	Note  *string `json:"note"`
 }
 
 type createListRequest struct {
 	Title       string              `json:"title"`
 	Description *string             `json:"description"`
 	IsRanked    *bool               `json:"is_ranked"` // pointer: omitted means true
-	ImageShape  *string             `json:"image_shape"`
 	Items       []createItemRequest `json:"items"`
 }
 
@@ -72,50 +68,7 @@ func (a *App) handleCreateList(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusBadRequest, "notes must be under 1000 characters")
 			return
 		}
-		if req.Items[i].ImageURL != nil {
-			clean, ok := safeImageURL(*req.Items[i].ImageURL)
-			if !ok {
-				writeError(w, http.StatusBadRequest, "image links must be http or https")
-				return
-			}
-			if clean == "" {
-				req.Items[i].ImageURL = nil
-			} else {
-				req.Items[i].ImageURL = &clean
-			}
-		}
-		// Provenance comes from the client, so it is checked against a known
-		// set rather than trusted — an unrecognised source is recorded as a
-		// plain link instead of being stored as whatever was sent.
-		if req.Items[i].ImageURL == nil {
-			req.Items[i].ImageSource, req.Items[i].ImageRef = nil, nil
-		} else {
-			source := "link"
-			if req.Items[i].ImageSource != nil {
-				if _, known := a.Providers[*req.Items[i].ImageSource]; known {
-					source = *req.Items[i].ImageSource
-				}
-			}
-			req.Items[i].ImageSource = &source
-			if source == "link" {
-				req.Items[i].ImageRef = nil
-			} else if req.Items[i].ImageRef != nil && len(*req.Items[i].ImageRef) > 200 {
-				req.Items[i].ImageRef = nil
-			}
-		}
 	}
-
-	shape := "square"
-	if req.ImageShape != nil {
-		switch *req.ImageShape {
-		case "square", "poster", "wide":
-			shape = *req.ImageShape
-		default:
-			writeError(w, http.StatusBadRequest, "image shape must be square, poster or wide")
-			return
-		}
-	}
-	req.ImageShape = &shape
 
 	userID := userIDFrom(r.Context())
 
@@ -169,12 +122,12 @@ func (a *App) insertList(ctx context.Context, userID int64, req createListReques
 	}
 
 	err = tx.QueryRow(ctx, `
-		INSERT INTO lists (user_id, title, slug, description, is_ranked, image_shape)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, title, slug, description, is_ranked, image_shape, created_at`,
-		userID, req.Title, slug, req.Description, isRanked, *req.ImageShape,
+		INSERT INTO lists (user_id, title, slug, description, is_ranked)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, title, slug, description, is_ranked, created_at`,
+		userID, req.Title, slug, req.Description, isRanked,
 	).Scan(&list.ID, &list.Title, &list.Slug, &list.Description,
-		&list.IsRanked, &list.ImageShape, &list.CreatedAt)
+		&list.IsRanked, &list.CreatedAt)
 	if err != nil {
 		return list, err
 	}
@@ -185,12 +138,11 @@ func (a *App) insertList(ctx context.Context, userID int64, req createListReques
 	for i, it := range req.Items {
 		var saved ListItem
 		err = tx.QueryRow(ctx, `
-			INSERT INTO list_items (list_id, rank, title, note, image_url, image_source, image_ref)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
-			RETURNING id, rank, title, note, image_url, image_source, image_ref`,
-			list.ID, i+1, it.Title, it.Note, it.ImageURL, it.ImageSource, it.ImageRef,
-		).Scan(&saved.ID, &saved.Rank, &saved.Title, &saved.Note,
-			&saved.ImageURL, &saved.ImageSource, &saved.ImageRef)
+			INSERT INTO list_items (list_id, rank, title, note)
+			VALUES ($1, $2, $3, $4)
+			RETURNING id, rank, title, note`,
+			list.ID, i+1, it.Title, it.Note,
+		).Scan(&saved.ID, &saved.Rank, &saved.Title, &saved.Note)
 		if err != nil {
 			return List{}, err
 		}
@@ -271,7 +223,7 @@ func (a *App) loadCards(ctx context.Context, sql string, args ...any) ([]List, e
 	for rows.Next() {
 		var l List
 		if err := rows.Scan(&l.ID, &l.Title, &l.Slug, &l.Description, &l.IsRanked,
-			&l.ImageShape, &l.CreatedAt, &l.Author.Username, &l.Author.DisplayName,
+			&l.CreatedAt, &l.Author.Username, &l.Author.DisplayName,
 			&l.ItemCount, &l.CommentCount); err != nil {
 			return nil, err
 		}
@@ -351,8 +303,8 @@ func (a *App) attachPreviews(ctx context.Context, ids []int64, byID map[int64]in
 	}
 
 	rows, err := a.DB.Query(ctx, `
-		SELECT list_id, id, rank, title, note, image_url, image_source, image_ref FROM (
-			SELECT list_id, id, rank, title, note, image_url, image_source, image_ref,
+		SELECT list_id, id, rank, title, note FROM (
+			SELECT list_id, id, rank, title, note,
 			       ROW_NUMBER() OVER (PARTITION BY list_id ORDER BY rank, id) AS rn
 			FROM list_items
 			WHERE list_id = ANY($1)
@@ -367,8 +319,7 @@ func (a *App) attachPreviews(ctx context.Context, ids []int64, byID map[int64]in
 	for rows.Next() {
 		var listID int64
 		var item ListItem
-		if err := rows.Scan(&listID, &item.ID, &item.Rank, &item.Title, &item.Note,
-			&item.ImageURL, &item.ImageSource, &item.ImageRef); err != nil {
+		if err := rows.Scan(&listID, &item.ID, &item.Rank, &item.Title, &item.Note); err != nil {
 			return err
 		}
 		if i, ok := byID[listID]; ok {
@@ -383,15 +334,15 @@ func (a *App) handleList(w http.ResponseWriter, r *http.Request) {
 
 	var l List
 	err := a.DB.QueryRow(r.Context(), `
-		SELECT l.id, l.title, l.slug, l.description, l.is_ranked, l.image_shape, l.created_at,
+		SELECT l.id, l.title, l.slug, l.description, l.is_ranked, l.created_at,
 		       u.username, u.display_name,
 		       (SELECT COUNT(*) FROM comments c WHERE c.list_id = l.id AND c.deleted_at IS NULL)
 		FROM lists l
 		JOIN users u ON u.id = l.user_id
 		WHERE u.username = $1 AND l.slug = $2 AND l.is_public`,
 		username, slug,
-	).Scan(&l.ID, &l.Title, &l.Slug, &l.Description, &l.IsRanked, &l.ImageShape,
-		&l.CreatedAt, &l.Author.Username, &l.Author.DisplayName, &l.CommentCount)
+	).Scan(&l.ID, &l.Title, &l.Slug, &l.Description, &l.IsRanked, &l.CreatedAt,
+		&l.Author.Username, &l.Author.DisplayName, &l.CommentCount)
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		writeError(w, http.StatusNotFound, "no such list")
@@ -403,8 +354,8 @@ func (a *App) handleList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := a.DB.Query(r.Context(), `
-		SELECT id, rank, title, note, image_url, image_source, image_ref
-		FROM list_items WHERE list_id = $1 ORDER BY rank, id`, l.ID)
+		SELECT id, rank, title, note FROM list_items
+		WHERE list_id = $1 ORDER BY rank, id`, l.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not load the list")
 		return
@@ -414,8 +365,7 @@ func (a *App) handleList(w http.ResponseWriter, r *http.Request) {
 	l.Items = []ListItem{}
 	for rows.Next() {
 		var item ListItem
-		if err := rows.Scan(&item.ID, &item.Rank, &item.Title, &item.Note,
-			&item.ImageURL, &item.ImageSource, &item.ImageRef); err != nil {
+		if err := rows.Scan(&item.ID, &item.Rank, &item.Title, &item.Note); err != nil {
 			writeError(w, http.StatusInternalServerError, "could not load the list")
 			return
 		}

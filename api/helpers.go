@@ -6,8 +6,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/url"
-	"strings"
 )
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -41,26 +39,4 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 		return errors.New("body must contain a single JSON object")
 	}
 	return nil
-}
-
-// safeImageURL accepts only an http(s) URL with a host. Anything else — a
-// javascript: or data: URL especially — would be rendered straight into an
-// <img src> on somebody else's screen, so it is rejected at the door rather
-// than sanitised later.
-func safeImageURL(raw string) (string, bool) {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return "", true // absent is fine; it just means no picture
-	}
-	if len(raw) > 2048 {
-		return "", false
-	}
-	u, err := url.Parse(raw)
-	if err != nil || u.Host == "" {
-		return "", false
-	}
-	if u.Scheme != "http" && u.Scheme != "https" {
-		return "", false
-	}
-	return raw, true
 }

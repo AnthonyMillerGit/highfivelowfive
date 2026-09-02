@@ -1,7 +1,4 @@
 import { marker } from "../lib/format";
-import { useState } from "react";
-import ItemImage from "./ItemImage";
-import ImagePicker from "./ImagePicker";
 
 function IconButton({ label, onClick, disabled, children }) {
   return (
@@ -32,25 +29,13 @@ const arrow = (points) => (
  *  drop: it needs no library, works from the keyboard, and is announced to
  *  screen readers — drag would be none of those without real work. */
 export default function ItemRow({
-  item, index, total, isRanked, shape, onChange, onPickImage, onMove, onRemove,
+  item, index, total, isRanked, onChange, onMove, onRemove,
 }) {
-  const [picking, setPicking] = useState(false);
-
   return (
-    <li className="border-b border-wire py-3">
-      <div className="flex items-start gap-3">
+    <li className="flex items-start gap-3 border-b border-wire py-3">
       <span className="mt-2.5 w-7 shrink-0 font-mono text-xs tabular-nums text-muted">
         {marker(isRanked, index + 1)}
       </span>
-
-      {/* The thumbnail updates as the link is typed, so a wrong URL is
-          obvious immediately rather than after publishing. */}
-      <ItemImage
-        src={item.image}
-        title={item.title}
-        shape={shape}
-        className="w-14"
-      />
 
       <div className="flex grow flex-col gap-2">
         <input
@@ -71,55 +56,22 @@ export default function ItemRow({
                      text-sm text-muted placeholder:text-muted/50 transition-colors
                      hover:border-wire focus:border-high focus:text-chalk focus:outline-none"
         />
-        <div className="flex items-center gap-3 px-3">
-          <button
-            type="button"
-            onClick={() => setPicking((v) => !v)}
-            className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted
-                       transition-colors hover:text-chalk"
-          >
-            {picking ? "Cancel" : item.image ? "Change picture" : "Find picture"}
-          </button>
-          {item.image && (
-            <button
-              type="button"
-              onClick={() => onPickImage(item.key, null)}
-              className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted
-                         transition-colors hover:text-low"
-            >
-              Remove picture
-            </button>
-          )}
-        </div>
       </div>
 
-        <div className="mt-1 flex shrink-0 gap-1.5">
-          <IconButton label="Move up" onClick={() => onMove(index, -1)} disabled={index === 0}>
+      <div className="mt-1 flex shrink-0 gap-1.5">
+        <IconButton label="Move up" onClick={() => onMove(index, -1)} disabled={index === 0}>
           {arrow("18 15 12 9 6 15")}
         </IconButton>
-          <IconButton label="Move down" onClick={() => onMove(index, 1)} disabled={index === total - 1}>
+        <IconButton label="Move down" onClick={() => onMove(index, 1)} disabled={index === total - 1}>
           {arrow("6 9 12 15 18 9")}
         </IconButton>
-          <IconButton label="Remove item" onClick={() => onRemove(item.key)} disabled={total === 1}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </IconButton>
-        </div>
+        <IconButton label="Remove item" onClick={() => onRemove(item.key)} disabled={total === 1}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </IconButton>
       </div>
-
-      {picking && (
-        <ImagePicker
-          initialQuery={item.title}
-          shape={shape}
-          onClose={() => setPicking(false)}
-          onPick={(result) => {
-            onPickImage(item.key, result);
-            setPicking(false);
-          }}
-        />
-      )}
     </li>
   );
 }

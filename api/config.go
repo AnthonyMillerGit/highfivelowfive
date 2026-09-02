@@ -14,7 +14,6 @@ type Config struct {
 	Port        string
 	JWTSecret   string
 	CORSOrigin  string
-	TMDBKey     string // optional: film search is simply not offered without it
 }
 
 func LoadConfig() Config {
@@ -33,7 +32,6 @@ func LoadConfig() Config {
 		Port:        envOr("PORT", "8081"),
 		JWTSecret:   os.Getenv("JWT_SECRET"),
 		CORSOrigin:  envOr("CORS_ORIGIN", "http://localhost:5173"),
-		TMDBKey:     os.Getenv("TMDB_API_KEY"),
 	}
 
 	// Fail loudly at boot rather than mysteriously on the first request.
