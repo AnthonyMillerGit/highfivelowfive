@@ -14,9 +14,15 @@ export function fullDate(iso) {
   });
 }
 
-/** Ranked lists number their items; unranked ones are equals, so they get
- *  bullets. This is the only place that distinction is rendered. */
-export function marker(isRanked, rank) {
+/**
+ * How a row is marked, in priority order: its own label if a template gave it
+ * one ("1994", "C", "Prequel"), else its rank number if the order is a
+ * ranking, else a bullet because the items are equals.
+ *
+ * This is the only place that decision is made.
+ */
+export function marker(isRanked, rank, label) {
+  if (label) return label;
   return isRanked ? String(rank).padStart(2, "0") : "•";
 }
 

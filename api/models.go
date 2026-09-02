@@ -33,8 +33,11 @@ type Profile struct {
 }
 
 type ListItem struct {
-	ID    int64   `json:"id"`
-	Rank  int     `json:"rank"`
+	ID   int64 `json:"id"`
+	Rank int   `json:"rank"`
+	// Label is the row's own identity — a year, a letter, a position — shown
+	// instead of the rank number when a template seeded one.
+	Label *string `json:"label"`
 	Title string  `json:"title"`
 	Note  *string `json:"note"`
 }

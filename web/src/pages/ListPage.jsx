@@ -81,11 +81,11 @@ export default function ListPage() {
         {list.items.map((item) => (
           <li key={item.id} className="flex gap-5 border-b border-wire py-[18px]">
             <span
-              className={`w-8 shrink-0 font-mono text-xl font-bold tabular-nums ${
+              className={`w-16 shrink-0 font-mono text-xl font-bold tabular-nums ${
                 list.is_ranked && item.rank === 1 ? "text-high" : "text-muted"
               }`}
             >
-              {marker(list.is_ranked, item.rank)}
+              {marker(list.is_ranked, item.rank, item.label)}
             </span>
             <span className="flex flex-col gap-1.5">
               <span className="font-display text-xl font-bold text-chalk">

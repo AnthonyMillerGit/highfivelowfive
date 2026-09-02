@@ -33,8 +33,8 @@ export default function ItemRow({
 }) {
   return (
     <li className="flex items-start gap-3 border-b border-wire py-3">
-      <span className="mt-2.5 w-7 shrink-0 font-mono text-xs tabular-nums text-muted">
-        {marker(isRanked, index + 1)}
+      <span className="mt-2.5 w-12 shrink-0 truncate font-mono text-xs tabular-nums text-muted">
+        {marker(isRanked, index + 1, item.label)}
       </span>
 
       <div className="flex grow flex-col gap-2">

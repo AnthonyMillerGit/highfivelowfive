@@ -30,11 +30,11 @@ export default function ListCard({ list }) {
             }`}
           >
             <span
-              className={`font-mono text-[11px] tabular-nums ${
+              className={`w-9 shrink-0 truncate font-mono text-[11px] tabular-nums ${
                 list.is_ranked && item.rank === 1 ? "text-high" : "text-muted"
               }`}
             >
-              {marker(list.is_ranked, item.rank)}
+              {marker(list.is_ranked, item.rank, item.label)}
             </span>
             <span className="text-sm text-chalk">{item.title}</span>
           </div>

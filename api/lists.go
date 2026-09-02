@@ -16,12 +16,14 @@ const (
 	maxTitleLen = 200
 	maxDescLen  = 2000
 	maxNoteLen  = 1000
+	maxLabelLen = 40
 	maxItems    = 100
 	previewSize = 3
 )
 
 type createItemRequest struct {
 	Title string  `json:"title"`
+	Label *string `json:"label"`
 	Note  *string `json:"note"`
 }
 
@@ -67,6 +69,18 @@ func (a *App) handleCreateList(w http.ResponseWriter, r *http.Request) {
 		if req.Items[i].Note != nil && len(*req.Items[i].Note) > maxNoteLen {
 			writeError(w, http.StatusBadRequest, "notes must be under 1000 characters")
 			return
+		}
+		if req.Items[i].Label != nil {
+			trimmed := strings.TrimSpace(*req.Items[i].Label)
+			if len(trimmed) > maxLabelLen {
+				writeError(w, http.StatusBadRequest, "labels must be under 40 characters")
+				return
+			}
+			if trimmed == "" {
+				req.Items[i].Label = nil
+			} else {
+				req.Items[i].Label = &trimmed
+			}
 		}
 	}
 
@@ -138,11 +152,11 @@ func (a *App) insertList(ctx context.Context, userID int64, req createListReques
 	for i, it := range req.Items {
 		var saved ListItem
 		err = tx.QueryRow(ctx, `
-			INSERT INTO list_items (list_id, rank, title, note)
-			VALUES ($1, $2, $3, $4)
-			RETURNING id, rank, title, note`,
-			list.ID, i+1, it.Title, it.Note,
-		).Scan(&saved.ID, &saved.Rank, &saved.Title, &saved.Note)
+			INSERT INTO list_items (list_id, rank, label, title, note)
+			VALUES ($1, $2, $3, $4, $5)
+			RETURNING id, rank, label, title, note`,
+			list.ID, i+1, it.Label, it.Title, it.Note,
+		).Scan(&saved.ID, &saved.Rank, &saved.Label, &saved.Title, &saved.Note)
 		if err != nil {
 			return List{}, err
 		}
@@ -303,8 +317,8 @@ func (a *App) attachPreviews(ctx context.Context, ids []int64, byID map[int64]in
 	}
 
 	rows, err := a.DB.Query(ctx, `
-		SELECT list_id, id, rank, title, note FROM (
-			SELECT list_id, id, rank, title, note,
+		SELECT list_id, id, rank, label, title, note FROM (
+			SELECT list_id, id, rank, label, title, note,
 			       ROW_NUMBER() OVER (PARTITION BY list_id ORDER BY rank, id) AS rn
 			FROM list_items
 			WHERE list_id = ANY($1)
@@ -319,7 +333,7 @@ func (a *App) attachPreviews(ctx context.Context, ids []int64, byID map[int64]in
 	for rows.Next() {
 		var listID int64
 		var item ListItem
-		if err := rows.Scan(&listID, &item.ID, &item.Rank, &item.Title, &item.Note); err != nil {
+		if err := rows.Scan(&listID, &item.ID, &item.Rank, &item.Label, &item.Title, &item.Note); err != nil {
 			return err
 		}
 		if i, ok := byID[listID]; ok {
@@ -354,7 +368,7 @@ func (a *App) handleList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := a.DB.Query(r.Context(), `
-		SELECT id, rank, title, note FROM list_items
+		SELECT id, rank, label, title, note FROM list_items
 		WHERE list_id = $1 ORDER BY rank, id`, l.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not load the list")
@@ -365,7 +379,7 @@ func (a *App) handleList(w http.ResponseWriter, r *http.Request) {
 	l.Items = []ListItem{}
 	for rows.Next() {
 		var item ListItem
-		if err := rows.Scan(&item.ID, &item.Rank, &item.Title, &item.Note); err != nil {
+		if err := rows.Scan(&item.ID, &item.Rank, &item.Label, &item.Title, &item.Note); err != nil {
 			writeError(w, http.StatusInternalServerError, "could not load the list")
 			return
 		}

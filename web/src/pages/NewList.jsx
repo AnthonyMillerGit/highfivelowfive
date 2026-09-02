@@ -2,16 +2,20 @@ import { useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
-import { TEMPLATES, templateById, customTemplate } from "../lib/templates";
+import { resolveTemplate } from "../lib/templates";
 import AppShell from "../components/AppShell";
 import Field from "../components/Field";
 import Button from "../components/Button";
 import Alert from "../components/Alert";
 import ItemRow from "../components/ItemRow";
-import TemplateCard from "../components/TemplateCard";
-import CustomTemplateCard from "../components/CustomTemplateCard";
+import {
+  NumberedCard,
+  YearCard,
+  LabelsCard,
+  SimpleCard,
+} from "../components/TemplateCard";
 
-const blank = (key) => ({ key, title: "", note: "" });
+const blank = (key, label = null) => ({ key, label, title: "", note: "" });
 
 /**
  * Two steps: pick a shape, then fill it in.
@@ -26,14 +30,11 @@ export default function NewList() {
 
   if (!id) return <TemplateChooser />;
 
-  const template =
-    id === "custom"
-      ? customTemplate(params.get("count"), params.get("ranked") !== "0")
-      : templateById(id);
+  const template = resolveTemplate(id, params);
 
-  // Keyed on the whole shape so switching rebuilds the form from scratch
-  // rather than trying to reconcile a 10-row list into a 4-row one.
-  return <Builder key={`${id}-${template.count}-${template.ranked}`} template={template} />;
+  // Keyed on the resolved shape so switching rebuilds the form from scratch
+  // rather than trying to reconcile a ten-row list into a four-row one.
+  return <Builder key={params.toString()} template={template} />;
 }
 
 function TemplateChooser() {
@@ -47,10 +48,21 @@ function TemplateChooser() {
       </p>
 
       <div className="mt-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {TEMPLATES.map((t) => (
-          <TemplateCard key={t.id} template={t} />
-        ))}
-        <CustomTemplateCard />
+        <NumberedCard />
+        <SimpleCard
+          id="rushmore"
+          name="Mount Rushmore"
+          hint="Four faces, no order"
+          marks={["•", "•", "•", "•"]}
+        />
+        <YearCard />
+        <SimpleCard
+          id="tier"
+          name="Tier list"
+          hint="S down to F"
+          marks={["S", "A", "B", "C", "D", "F"]}
+        />
+        <LabelsCard />
       </div>
     </AppShell>
   );
@@ -63,9 +75,9 @@ function Builder({ template }) {
   // Rows need identities that survive reordering. Using the array index as a
   // React key would make the inputs lose focus and swap values mid-typing when
   // rows move, so every row carries a key that never changes.
-  const nextKey = useRef(template.count);
+  const nextKey = useRef(template.rows.length);
   const [items, setItems] = useState(() =>
-    Array.from({ length: template.count }, (_, i) => blank(i))
+    template.rows.map((row, i) => blank(i, row.label))
   );
 
   const [title, setTitle] = useState("");
@@ -105,7 +117,11 @@ function Builder({ template }) {
     // Trailing blank rows are the normal way people leave a builder, so drop
     // them rather than making the server reject the whole list.
     const filled = items
-      .map((it) => ({ title: it.title.trim(), note: it.note.trim() }))
+      .map((it) => ({
+        title: it.title.trim(),
+        note: it.note.trim(),
+        label: it.label,
+      }))
       .filter((it) => it.title !== "");
 
     if (!title.trim()) return setError("Give the list a title.");
@@ -119,7 +135,11 @@ function Builder({ template }) {
           title: title.trim(),
           description: description.trim() || null,
           is_ranked: isRanked,
-          items: filled.map((it) => ({ title: it.title, note: it.note || null })),
+          items: filled.map((it) => ({
+            title: it.title,
+            note: it.note || null,
+            label: it.label,
+          })),
         },
       });
       navigate(`/u/${user.username}/${created.slug}`, { replace: true });
