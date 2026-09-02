@@ -1,0 +1,190 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Karla:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap">
+  <style>
+    body { margin: 0; background: #17132A; font-family: 'Karla', ui-sans-serif, system-ui, sans-serif; color: #F2EDE4; }
+    a { color: #FFC24B; text-decoration: none; }
+    a:hover { color: #FFD37A; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; background: #17132A; padding-bottom: 72px">
+
+  <!-- ── header, matching AppShell.jsx ── -->
+  <div style="border-bottom: 1px solid #372F5C">
+    <div style="max-width: 1024px; margin: 0 auto; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between">
+      <div style="display: flex; flex-direction: column; line-height: 1; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 11px; letter-spacing: 0.18em">
+        <span style="color: #FFC24B">HIGH FIVE</span>
+        <span style="height: 1px; background: #372F5C; margin: 3px 0"></span>
+        <span style="color: #FF6B8A">LOW FIVE</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 24px">
+        <span style="font-family: 'Space Mono', monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #9C93BC">Feed</span>
+        <span style="font-family: 'Space Mono', monospace; font-size: 12px; color: #9C93BC">@anthony</span>
+        <span style="font-family: 'Space Mono', monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #9C93BC">Sign out</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width: 1024px; margin: 0 auto; padding: 48px 24px 0">
+
+    <!-- ── identity block ── -->
+    <div style="display: flex; align-items: flex-start; gap: 24px">
+      <div style="width: 88px; height: 88px; flex-shrink: 0; border-radius: 8px; background: #211C3B; border: 1px solid #372F5C; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 38px; color: #FFC24B">A</div>
+
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; align-items: baseline; gap: 12px">
+          <h1 style="margin: 0; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 30px; color: #F2EDE4">Anthony Miller</h1>
+          <span style="font-family: 'Space Mono', monospace; font-size: 13px; color: #9C93BC">@anthony</span>
+        </div>
+        <p style="margin: 0; max-width: 560px; font-size: 15px; line-height: 1.6; color: #F2EDE4">Ranking things since the podcast days. I will die on several of these hills, and I have receipts for all of them.</p>
+
+        <div style="display: flex; gap: 28px; margin-top: 8px">
+          <div style="display: flex; align-items: baseline; gap: 6px">
+            <span style="font-family: 'Space Mono', monospace; font-weight: 700; font-size: 15px; color: #F2EDE4">12</span>
+            <span style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: #9C93BC">Lists</span>
+          </div>
+          <div style="display: flex; align-items: baseline; gap: 6px">
+            <span style="font-family: 'Space Mono', monospace; font-weight: 700; font-size: 15px; color: #F2EDE4">248</span>
+            <span style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: #9C93BC">Followers</span>
+          </div>
+          <div style="display: flex; align-items: baseline; gap: 6px">
+            <span style="font-family: 'Space Mono', monospace; font-weight: 700; font-size: 15px; color: #F2EDE4">63</span>
+            <span style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: #9C93BC">Following</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px; flex-shrink: 0">
+        <div style="border: 1px solid #372F5C; border-radius: 6px; padding: 9px 16px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; color: #9C93BC">Edit profile</div>
+        <div style="background: #FFC24B; border-radius: 6px; padding: 10px 18px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.02em; color: #17132A">New list</div>
+      </div>
+    </div>
+
+    <!-- ── section header ── -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 48px; padding-bottom: 14px; border-bottom: 1px solid #372F5C">
+      <span style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #9C93BC">12 lists</span>
+      <div style="display: flex; align-items: center; gap: 6px">
+        <span style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #9C93BC">Newest first</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9C93BC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </div>
+    </div>
+
+    <!-- ── list cards ── -->
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-top: 24px">
+
+      <div style="background: #211C3B; border: 1px solid #372F5C; border-radius: 8px; padding: 24px">
+        <span style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: #9C93BC">Ranked &middot; 5 items</span>
+        <h3 style="margin: 8px 0 0; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 20px; color: #F2EDE4">Best Action Movies, Settled Forever</h3>
+        <div style="display: flex; flex-direction: column; margin-top: 16px">
+          <div style="display: flex; align-items: baseline; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(55, 47, 92, 0.6)"><span style="font-family: 'Space Mono', monospace; font-size: 11px; color: #FFC24B">01</span><span style="font-size: 14px; color: #F2EDE4">Heat</span></div>
+          <div style="display: flex; align-items: baseline; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(55, 47, 92, 0.6)"><span style="font-family: 'Space Mono', monospace; font-size: 11px; color: #9C93BC">02</span><span style="font-size: 14px; color: #F2EDE4">Point Break</span></div>
+          <div style="display: flex; align-items: baseline; gap: 12px; padding: 7px 0"><span style="font-family: 'Space Mono', monospace; font-size: 11px; color: #9C93BC">03</span><span style="font-size: 14px; color: #F2EDE4">Ronin</span></div>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding-top: 14px; border-top: 1px solid #372F5C">
+          <div style="display: flex; align-items: center; gap: 7px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9C93BC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+            <span style="font-family: 'Space Mono', monospace; font-size: 11px; color: #9C93BC">23</span>
+          </div>
+          <span style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #9C93BC">SEP 2</span>
+        </div>
+      </div>
+
+      <div style="background: #211C3B; border: 1px solid #372F5C; border-radius: 8px; padding: 24px">
+        <span style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: #9C93BC">Unranked &middot; 4 items</span>
+        <h3 style="margin: 8px 0 0; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 20px; color: #F2EDE4">My Mount Rushmore of NBA Centers</h3>
+        <div style="display: flex; flex-direction: column; margin-top: 16px">
+          <div style="display: flex; align-items: baseline; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(55, 47, 92, 0.6)"><span style="color: #9C93BC; font-size: 11px">&bull;</span><span style="font-size: 14px; color: #F2EDE4">Hakeem Olajuwon</span></div>
+          <div style="display: flex; align-items: baseline; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(55, 47, 92, 0.6)"><span style="color: #9C93BC; font-size: 11px">&bull;</span><span style="font-size: 14px; color: #F2EDE4">Kareem Abdul-Jabbar</span></div>
+          <div style="display: flex; align-items: baseline; gap: 12px; padding: 7px 0"><span style="color: #9C93BC; font-size: 11px">&bull;</span><span style="font-size: 14px; color: #F2EDE4">Shaquille O'Neal</span></div>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding-top: 14px; border-top: 1px solid #372F5C">
+          <div style="display: flex; align-items: center; gap: 7px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9C93BC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+            <span style="font-family: 'Space Mono', monospace; font-size: 11px; color: #9C93BC">41</span>
+          </div>
+          <span style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #9C93BC">AUG 28</span>
+        </div>
+      </div>
+
+      <div style="background: #211C3B; border: 1px solid #372F5C; border-radius: 8px; padding: 24px">
+        <span style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: #9C93BC">Ranked &middot; 5 items</span>
+        <h3 style="margin: 8px 0 0; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 20px; color: #F2EDE4">Worst Album Closers of the 90s</h3>
+        <div style="display: flex; flex-direction: column; margin-top: 16px">
+          <div style="display: flex; align-items: baseline; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(55, 47, 92, 0.6)"><span style="font-family: 'Space Mono', monospace; font-size: 11px; color: #FFC24B">01</span><span style="font-size: 14px; color: #F2EDE4">Fitter Happier</span></div>
+          <div style="display: flex; align-items: baseline; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(55, 47, 92, 0.6)"><span style="font-family: 'Space Mono', monospace; font-size: 11px; color: #9C93BC">02</span><span style="font-size: 14px; color: #F2EDE4">Revolution 9, spiritually</span></div>
+          <div style="display: flex; align-items: baseline; gap: 12px; padding: 7px 0"><span style="font-family: 'Space Mono', monospace; font-size: 11px; color: #9C93BC">03</span><span style="font-size: 14px; color: #F2EDE4">Untitled hidden track, 11 min</span></div>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding-top: 14px; border-top: 1px solid #372F5C">
+          <div style="display: flex; align-items: center; gap: 7px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9C93BC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+            <span style="font-family: 'Space Mono', monospace; font-size: 11px; color: #9C93BC">12</span>
+          </div>
+          <span style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #9C93BC">AUG 21</span>
+        </div>
+      </div>
+
+      <div style="background: #211C3B; border: 1px solid #372F5C; border-radius: 8px; padding: 24px">
+        <span style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: #9C93BC">Ranked &middot; 3 items</span>
+        <h3 style="margin: 8px 0 0; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 20px; color: #F2EDE4">Top 3 Records to Hand Out Candy To</h3>
+        <div style="display: flex; flex-direction: column; margin-top: 16px">
+          <div style="display: flex; align-items: baseline; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(55, 47, 92, 0.6)"><span style="font-family: 'Space Mono', monospace; font-size: 11px; color: #FFC24B">01</span><span style="font-size: 14px; color: #F2EDE4">Goblin &mdash; Goblin</span></div>
+          <div style="display: flex; align-items: baseline; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(55, 47, 92, 0.6)"><span style="font-family: 'Space Mono', monospace; font-size: 11px; color: #9C93BC">02</span><span style="font-size: 14px; color: #F2EDE4">Halloween OST</span></div>
+          <div style="display: flex; align-items: baseline; gap: 12px; padding: 7px 0"><span style="font-family: 'Space Mono', monospace; font-size: 11px; color: #9C93BC">03</span><span style="font-size: 14px; color: #F2EDE4">Monster Mash, unironically</span></div>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding-top: 14px; border-top: 1px solid #372F5C">
+          <div style="display: flex; align-items: center; gap: 7px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9C93BC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+            <span style="font-family: 'Space Mono', monospace; font-size: 11px; color: #9C93BC">8</span>
+          </div>
+          <span style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #9C93BC">AUG 14</span>
+        </div>
+      </div>
+
+      <div style="background: #211C3B; border: 1px solid #372F5C; border-radius: 8px; padding: 24px">
+        <span style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: #9C93BC">Ranked &middot; 6 items</span>
+        <h3 style="margin: 8px 0 0; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 20px; color: #F2EDE4">Every Alien Movie, Best to Worst</h3>
+        <div style="display: flex; flex-direction: column; margin-top: 16px">
+          <div style="display: flex; align-items: baseline; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(55, 47, 92, 0.6)"><span style="font-family: 'Space Mono', monospace; font-size: 11px; color: #FFC24B">01</span><span style="font-size: 14px; color: #F2EDE4">Aliens</span></div>
+          <div style="display: flex; align-items: baseline; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(55, 47, 92, 0.6)"><span style="font-family: 'Space Mono', monospace; font-size: 11px; color: #9C93BC">02</span><span style="font-size: 14px; color: #F2EDE4">Alien</span></div>
+          <div style="display: flex; align-items: baseline; gap: 12px; padding: 7px 0"><span style="font-family: 'Space Mono', monospace; font-size: 11px; color: #9C93BC">03</span><span style="font-size: 14px; color: #F2EDE4">Prometheus</span></div>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding-top: 14px; border-top: 1px solid #372F5C">
+          <div style="display: flex; align-items: center; gap: 7px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9C93BC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+            <span style="font-family: 'Space Mono', monospace; font-size: 11px; color: #9C93BC">67</span>
+          </div>
+          <span style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #9C93BC">AUG 9</span>
+        </div>
+      </div>
+
+      <div style="background: #211C3B; border: 1px solid #372F5C; border-radius: 8px; padding: 24px">
+        <span style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: #9C93BC">Ranked &middot; 5 items</span>
+        <h3 style="margin: 8px 0 0; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 20px; color: #F2EDE4">Sandwiches by Structural Integrity</h3>
+        <div style="display: flex; flex-direction: column; margin-top: 16px">
+          <div style="display: flex; align-items: baseline; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(55, 47, 92, 0.6)"><span style="font-family: 'Space Mono', monospace; font-size: 11px; color: #FFC24B">01</span><span style="font-size: 14px; color: #F2EDE4">Cuban</span></div>
+          <div style="display: flex; align-items: baseline; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(55, 47, 92, 0.6)"><span style="font-family: 'Space Mono', monospace; font-size: 11px; color: #9C93BC">02</span><span style="font-size: 14px; color: #F2EDE4">Banh mi</span></div>
+          <div style="display: flex; align-items: baseline; gap: 12px; padding: 7px 0"><span style="font-family: 'Space Mono', monospace; font-size: 11px; color: #9C93BC">03</span><span style="font-size: 14px; color: #F2EDE4">Italian beef, wet</span></div>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding-top: 14px; border-top: 1px solid #372F5C">
+          <div style="display: flex; align-items: center; gap: 7px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9C93BC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+            <span style="font-family: 'Space Mono', monospace; font-size: 11px; color: #9C93BC">19</span>
+          </div>
+          <span style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #9C93BC">AUG 3</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html",     "x": 0,    "y": 0, "w": 1440, "h": 1260, "title": "Profile" },
+    { "file": "ListPage.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 1500, "title": "List page" },
+    { "file": "Feed.dc.html",     "x": 3120, "y": 0, "w": 1440, "h": 1440, "title": "Feed" }
+  ],
+  "annotations": [
+    { "id": "schema-note", "x": 0, "y": -190, "w": 460, "text": "What these screens demand from the API\n\nEvery list card needs: item count, is_ranked, the first 3 items, comment count, created_at, slug. That is more than a lists row holds - the endpoint has to join and count." },
+    { "id": "feed-note", "x": 3120, "y": -190, "w": 460, "text": "The feed is only 'lists from people you follow, newest first'. No events or activity table needed - just a join through follows. Keep it that way as long as possible." },
+    { "id": "worst-note", "x": 1560, "y": -190, "w": 460, "text": "Open question: a 'worst of' list looks identical to a 'best of' one. Gold still marks rank 01. If worst-lists should read differently, that is the kind column we deliberately skipped." }
+  ],
+  "launch": { "view": "canvas" }
+}

@@ -12,3 +12,6 @@ web/.vite/
 
 # os
 .DS_Store
+
+# seeded design canvas — 2.4MB of bundled editor, rebuilt from the .dc.html sources
+design/high-five-low-five-screens.html

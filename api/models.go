@@ -12,3 +12,41 @@ type User struct {
 	Bio         *string   `json:"bio"`
 	CreatedAt   time.Time `json:"created_at"`
 }
+
+// Author is the slice of a user that appears next to their content.
+type Author struct {
+	Username    string  `json:"username"`
+	DisplayName *string `json:"display_name"`
+}
+
+// Profile is a user's public page header.
+type Profile struct {
+	Username    string  `json:"username"`
+	DisplayName *string `json:"display_name"`
+	Bio         *string `json:"bio"`
+	ListCount   int     `json:"list_count"`
+}
+
+type ListItem struct {
+	ID    int64   `json:"id"`
+	Rank  int     `json:"rank"`
+	Title string  `json:"title"`
+	Note  *string `json:"note"`
+}
+
+// List serves both shapes the UI needs, distinguished by which item slice is
+// filled: Preview (first three, for cards in a grid or feed) or Items (all of
+// them, for the list page). The empty one is omitted from the JSON.
+type List struct {
+	ID           int64      `json:"id"`
+	Title        string     `json:"title"`
+	Slug         string     `json:"slug"`
+	Description  *string    `json:"description"`
+	IsRanked     bool       `json:"is_ranked"`
+	ItemCount    int        `json:"item_count"`
+	CommentCount int        `json:"comment_count"`
+	CreatedAt    time.Time  `json:"created_at"`
+	Author       Author     `json:"author"`
+	Preview      []ListItem `json:"preview,omitempty"`
+	Items        []ListItem `json:"items,omitempty"`
+}

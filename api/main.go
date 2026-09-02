@@ -51,10 +51,16 @@ func main() {
 	r.Post("/api/auth/signup", app.handleSignup)
 	r.Post("/api/auth/login", app.handleLogin)
 
+	// Public reads: profiles and lists are readable without an account.
+	r.Get("/api/users/{username}", app.handleProfile)
+	r.Get("/api/users/{username}/lists", app.handleUserLists)
+	r.Get("/api/users/{username}/lists/{slug}", app.handleList)
+
 	// Protected: everything in this group runs RequireAuth first.
 	r.Group(func(r chi.Router) {
 		r.Use(app.RequireAuth)
 		r.Get("/api/auth/me", app.handleMe)
+		r.Post("/api/lists", app.handleCreateList)
 	})
 
 	srv := &http.Server{
