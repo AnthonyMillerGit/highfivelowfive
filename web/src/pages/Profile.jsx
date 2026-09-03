@@ -6,7 +6,6 @@ import AppShell from "../components/AppShell";
 import ListCard from "../components/ListCard";
 import Spinner from "../components/Spinner";
 import Avatar from "../components/Avatar";
-import AvatarUploader from "../components/AvatarUploader";
 import ProfileEditor from "../components/ProfileEditor";
 import FollowButton from "../components/FollowButton";
 import PinToggle from "../components/PinToggle";
@@ -85,22 +84,9 @@ export default function Profile() {
   return (
     <AppShell wide>
       <div className="flex items-start gap-6">
-        {/* Your own face is the one you can change. Everyone else's is just
-            shown — there is no edit affordance to explain away. */}
-        {isOwn && user ? (
-          <AvatarUploader
-            user={user}
-            onChange={(updated) => {
-              updateUser(updated);
-              setProfile((prev) => ({ ...prev, avatar_url: updated.avatar_url }));
-            }}
-          />
-        ) : (
-          <Avatar user={profile} size="lg" />
-        )}
-
-        {editing ? (
+        {editing && user ? (
           <ProfileEditor
+            user={user}
             profile={profile}
             onCancel={() => setEditing(false)}
             onSaved={(updated) => {
@@ -109,11 +95,15 @@ export default function Profile() {
                 ...prev,
                 display_name: updated.display_name,
                 bio: updated.bio,
+                avatar_url: updated.avatar_url,
               }));
               setEditing(false);
             }}
           />
         ) : (
+        <>
+        <Avatar user={profile} size="lg" />
+
         <div className="flex grow flex-col gap-2">
           <div className="flex items-baseline gap-3">
             <h1 className="font-display text-3xl font-extrabold">
@@ -121,17 +111,6 @@ export default function Profile() {
             </h1>
             {profile.display_name && (
               <span className="font-mono text-[13px] text-muted">@{profile.username}</span>
-            )}
-            {isOwn && (
-              <button
-                type="button"
-                onClick={() => setEditing(true)}
-                className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted
-                           underline decoration-wire underline-offset-4 transition-colors
-                           hover:text-high hover:decoration-high"
-              >
-                Edit
-              </button>
             )}
           </div>
           {profile.bio ? (
@@ -162,21 +141,35 @@ export default function Profile() {
             ))}
           </div>
         </div>
-        )}
 
-        {/* Only shown to a signed-in visitor looking at somebody else. */}
-        {user && !profile.is_self && (
-          <FollowButton
-            username={profile.username}
-            following={profile.is_following}
-            onChange={(following) =>
-              setProfile((prev) => ({
-                ...prev,
-                is_following: following,
-                follower_count: prev.follower_count + (following ? 1 : -1),
-              }))
-            }
-          />
+        {/* The same corner does the one thing this profile offers you: follow
+            the person, or — if the person is you — change what it says. */}
+        {isOwn ? (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="shrink-0 rounded-md border border-wire px-5 py-2.5 font-display
+                       text-[13px] font-bold text-muted transition-colors
+                       hover:border-muted/60 hover:text-chalk"
+          >
+            Edit profile
+          </button>
+        ) : (
+          user && (
+            <FollowButton
+              username={profile.username}
+              following={profile.is_following}
+              onChange={(following) =>
+                setProfile((prev) => ({
+                  ...prev,
+                  is_following: following,
+                  follower_count: prev.follower_count + (following ? 1 : -1),
+                }))
+              }
+            />
+          )
+        )}
+        </>
         )}
       </div>
 
