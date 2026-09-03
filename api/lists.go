@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -19,6 +20,9 @@ const (
 	maxLabelLen = 40
 	maxItems    = 100
 	previewSize = 3
+
+	// How many lists an author may put at the top of their profile.
+	maxPinned = 3
 )
 
 type itemRequest struct {
@@ -339,6 +343,85 @@ func (a *App) handleDeleteList(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// ------------------------------------------------------------------- pin
+
+func (a *App) handlePinList(w http.ResponseWriter, r *http.Request) {
+	listID, err := strconv.ParseInt(chi.URLParam(r, "listID"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad list id")
+		return
+	}
+	userID := userIDFrom(r.Context())
+
+	// Ownership and the shelf limit are both clauses of the UPDATE, so the
+	// count cannot go stale between checking it and pinning. The
+	// pinned_at IS NULL clause makes this idempotent: re-pinning something
+	// already pinned leaves its place alone rather than moving it to the end.
+	tag, err := a.DB.Exec(r.Context(), `
+		UPDATE lists SET pinned_at = now()
+		WHERE id = $1 AND user_id = $2 AND pinned_at IS NULL
+		  AND (SELECT COUNT(*) FROM lists
+		       WHERE user_id = $2 AND pinned_at IS NOT NULL) < $3`,
+		listID, userID, maxPinned)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not pin the list")
+		return
+	}
+
+	if tag.RowsAffected() == 0 {
+		// Nothing moved, and why matters to the author: a full shelf is a
+		// different problem from a list that is not theirs, and needs a
+		// different sentence. Only worth a second query now that we already
+		// know something went wrong.
+		var owned, alreadyPinned bool
+		if err := a.DB.QueryRow(r.Context(), `
+			SELECT EXISTS (SELECT 1 FROM lists WHERE id = $1 AND user_id = $2),
+			       COALESCE((SELECT pinned_at IS NOT NULL FROM lists
+			                 WHERE id = $1 AND user_id = $2), false)`,
+			listID, userID).Scan(&owned, &alreadyPinned); err != nil {
+			writeError(w, http.StatusInternalServerError, "could not pin the list")
+			return
+		}
+		switch {
+		case !owned:
+			writeError(w, http.StatusNotFound, "no such list")
+			return
+		case alreadyPinned:
+			// Already where the caller wanted it. That is success.
+		default:
+			writeError(w, http.StatusConflict,
+				fmt.Sprintf("you can pin %d lists — unpin one first", maxPinned))
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (a *App) handleUnpinList(w http.ResponseWriter, r *http.Request) {
+	listID, err := strconv.ParseInt(chi.URLParam(r, "listID"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad list id")
+		return
+	}
+
+	// Unpinning an unpinned list is not an error — the row still matches, so
+	// this says "make sure it is not pinned" rather than "unpin it".
+	tag, err := a.DB.Exec(r.Context(),
+		`UPDATE lists SET pinned_at = NULL WHERE id = $1 AND user_id = $2`,
+		listID, userIDFrom(r.Context()))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not unpin the list")
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		writeError(w, http.StatusNotFound, "no such list")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // ------------------------------------------------------------------ read
 
 // listCardSelect is the card shape the profile grid and the feed both render.
@@ -346,6 +429,7 @@ func (a *App) handleDeleteList(w http.ResponseWriter, r *http.Request) {
 // two drift and a field added for one silently goes missing from the other.
 const listCardSelect = `
 	SELECT l.id, l.title, l.slug, l.description, l.is_ranked, l.created_at,
+	       l.pinned_at IS NOT NULL,
 	       u.username, u.display_name,
 	       (SELECT COUNT(*) FROM list_items li WHERE li.list_id = l.id),
 	       (SELECT COUNT(*) FROM comments   c  WHERE c.list_id  = l.id AND c.deleted_at IS NULL)
@@ -369,7 +453,7 @@ func (a *App) loadCards(ctx context.Context, sql string, args ...any) ([]List, e
 	for rows.Next() {
 		var l List
 		if err := rows.Scan(&l.ID, &l.Title, &l.Slug, &l.Description, &l.IsRanked,
-			&l.CreatedAt, &l.Author.Username, &l.Author.DisplayName,
+			&l.CreatedAt, &l.Pinned, &l.Author.Username, &l.Author.DisplayName,
 			&l.ItemCount, &l.CommentCount); err != nil {
 			return nil, err
 		}
@@ -391,9 +475,12 @@ func (a *App) loadCards(ctx context.Context, sql string, args ...any) ([]List, e
 func (a *App) handleUserLists(w http.ResponseWriter, r *http.Request) {
 	username := chi.URLParam(r, "username")
 
+	// Pinned lists come first, in the order they were pinned; everything else
+	// follows newest first. One ordering rather than two queries, so the page
+	// can split the array wherever `pinned` stops being true.
 	lists, err := a.loadCards(r.Context(), listCardSelect+`
 		WHERE u.username = $1 AND l.is_public
-		ORDER BY l.created_at DESC
+		ORDER BY (l.pinned_at IS NULL), l.pinned_at, l.created_at DESC
 		LIMIT 50`, username)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not load lists")
@@ -481,6 +568,7 @@ func (a *App) handleList(w http.ResponseWriter, r *http.Request) {
 	var l List
 	err := a.DB.QueryRow(r.Context(), `
 		SELECT l.id, l.title, l.slug, l.description, l.is_ranked, l.created_at,
+		       l.pinned_at IS NOT NULL,
 		       u.username, u.display_name,
 		       (SELECT COUNT(*) FROM comments c WHERE c.list_id = l.id AND c.deleted_at IS NULL)
 		FROM lists l
@@ -488,7 +576,7 @@ func (a *App) handleList(w http.ResponseWriter, r *http.Request) {
 		WHERE u.username = $1 AND l.slug = $2 AND l.is_public`,
 		username, slug,
 	).Scan(&l.ID, &l.Title, &l.Slug, &l.Description, &l.IsRanked, &l.CreatedAt,
-		&l.Author.Username, &l.Author.DisplayName, &l.CommentCount)
+		&l.Pinned, &l.Author.Username, &l.Author.DisplayName, &l.CommentCount)
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		writeError(w, http.StatusNotFound, "no such list")

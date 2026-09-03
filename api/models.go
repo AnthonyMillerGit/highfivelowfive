@@ -46,11 +46,13 @@ type ListItem struct {
 // filled: Preview (first three, for cards in a grid or feed) or Items (all of
 // them, for the list page). The empty one is omitted from the JSON.
 type List struct {
-	ID           int64      `json:"id"`
-	Title        string     `json:"title"`
-	Slug         string     `json:"slug"`
-	Description  *string    `json:"description"`
-	IsRanked     bool       `json:"is_ranked"`
+	ID          int64   `json:"id"`
+	Title       string  `json:"title"`
+	Slug        string  `json:"slug"`
+	Description *string `json:"description"`
+	IsRanked    bool    `json:"is_ranked"`
+	// Pinned means the author put this near the top of their profile.
+	Pinned       bool       `json:"pinned"`
 	ItemCount    int        `json:"item_count"`
 	CommentCount int        `json:"comment_count"`
 	CreatedAt    time.Time  `json:"created_at"`

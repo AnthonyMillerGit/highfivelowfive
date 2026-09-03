@@ -70,6 +70,8 @@ func main() {
 		r.Post("/api/lists", app.handleCreateList)
 		r.Patch("/api/lists/{listID}", app.handleUpdateList)
 		r.Delete("/api/lists/{listID}", app.handleDeleteList)
+		r.Post("/api/lists/{listID}/pin", app.handlePinList)
+		r.Delete("/api/lists/{listID}/pin", app.handleUnpinList)
 		r.Post("/api/lists/{listID}/comments", app.handleCreateComment)
 		r.Delete("/api/comments/{commentID}", app.handleDeleteComment)
 		r.Get("/api/feed", app.handleFeed)

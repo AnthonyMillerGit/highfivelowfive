@@ -7,18 +7,22 @@ import AppShell from "../components/AppShell";
 import Spinner from "../components/Spinner";
 import Comments from "../components/Comments";
 import Monogram from "../components/Monogram";
+import PinToggle from "../components/PinToggle";
+import Alert from "../components/Alert";
 
 export default function ListPage() {
   const { username, slug } = useParams();
   const { user } = useAuth();
   const [list, setList] = useState(null);
   const [error, setError] = useState("");
+  const [pinError, setPinError] = useState("");
 
   useEffect(() => {
     // Reset on navigation, or moving between two lists would briefly show the
     // previous one's items under the new one's title.
     setList(null);
     setError("");
+    setPinError("");
     api(`/api/users/${username}/lists/${slug}`)
       .then(setList)
       .catch((err) => setError(err.message));
@@ -88,17 +92,28 @@ export default function ListPage() {
         <span>{fullDate(list.created_at)}</span>
       </div>
 
-      {/* Only the author is offered the edit; the API refuses anyone else
+      {/* Only the author is offered these; the API refuses anyone else
           regardless, so this is about not showing a door that is locked. */}
       {user?.username === list.author.username && (
-        <Link
-          to={`/u/${list.author.username}/${list.slug}/edit`}
-          className="mt-4 inline-block font-mono text-[11px] uppercase tracking-[0.16em]
-                     text-muted underline decoration-wire underline-offset-4
-                     transition-colors hover:text-high hover:decoration-high"
-        >
-          Edit list
-        </Link>
+        <div className="mt-4 flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-5">
+            <Link
+              to={`/u/${list.author.username}/${list.slug}/edit`}
+              className="font-mono text-[11px] uppercase tracking-[0.16em]
+                         text-muted underline decoration-wire underline-offset-4
+                         transition-colors hover:text-high hover:decoration-high"
+            >
+              Edit list
+            </Link>
+            <PinToggle
+              list={list}
+              variant="text"
+              onChange={(pinned) => setList((prev) => ({ ...prev, pinned }))}
+              onError={setPinError}
+            />
+          </div>
+          {pinError && <Alert>{pinError}</Alert>}
+        </div>
       )}
 
       {grouped ? <GroupedItems list={list} /> : <FlatItems list={list} />}

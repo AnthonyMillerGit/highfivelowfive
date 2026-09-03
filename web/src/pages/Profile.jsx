@@ -7,6 +7,12 @@ import ListCard from "../components/ListCard";
 import Spinner from "../components/Spinner";
 import Monogram from "../components/Monogram";
 import FollowButton from "../components/FollowButton";
+import PinToggle from "../components/PinToggle";
+import Alert from "../components/Alert";
+
+/** How many an author may pin. The server owns the rule; this is only what the
+ *  page says out loud while there is still room. */
+const MAX_PINNED = 3;
 
 /** Serves both "/" (your own lists) and "/u/:username" (anyone's). One
  *  component because the page is the same page — only the empty state and the
@@ -20,12 +26,14 @@ export default function Profile() {
   const [profile, setProfile] = useState(null);
   const [lists, setLists] = useState(null);
   const [error, setError] = useState("");
+  const [pinError, setPinError] = useState("");
 
   useEffect(() => {
     if (!username) return;
     setProfile(null);
     setLists(null);
     setError("");
+    setPinError("");
 
     // Both requests go out together rather than in sequence — they do not
     // depend on each other, so waiting for the first would just be slower.
@@ -39,6 +47,14 @@ export default function Profile() {
       })
       .catch((err) => setError(err.message));
   }, [username]);
+
+  // Pinning changes the order of the whole page, and the order is the
+  // server's answer — pinned first by when they were pinned, then the rest
+  // newest first. Re-asking is one request and cannot drift; rebuilding that
+  // sort by hand here could.
+  async function refreshLists() {
+    setLists(await api(`/api/users/${username}/lists`));
+  }
 
   if (error) {
     return (
@@ -56,6 +72,11 @@ export default function Profile() {
       </AppShell>
     );
   }
+
+  // The server already sorted pinned-first, so the split is a partition, not
+  // a re-sort: the pinned ones are exactly the run at the front.
+  const pinned = lists.filter((l) => l.pinned);
+  const rest = lists.filter((l) => !l.pinned);
 
   return (
     <AppShell wide>
@@ -124,19 +145,97 @@ export default function Profile() {
         </div>
       ) : (
         <>
-          <div className="mt-12 flex items-center justify-end border-b border-wire pb-3.5">
-            <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
-              Newest first
-            </span>
-          </div>
+          {pinError && (
+            <div className="mt-12 max-w-xl">
+              <Alert>{pinError}</Alert>
+            </div>
+          )}
+
+          {/* The shelf. Three across on a wide screen, so a full one reads as
+              a deliberate row rather than the top of the pile. */}
+          {pinned.length > 0 && (
+            <>
+              <SectionHeading
+                title="Pinned"
+                note={
+                  isOwn
+                    ? `${pinned.length} of ${MAX_PINNED}`
+                    : `${profile.display_name ?? "@" + profile.username} leads with these`
+                }
+              />
+              <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {pinned.map((list) => (
+                  <PinnableCard
+                    key={list.id}
+                    list={list}
+                    isOwn={isOwn}
+                    highlight
+                    onChange={refreshLists}
+                    onError={setPinError}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+
+          <SectionHeading
+            title={pinned.length > 0 ? "Everything else" : "Lists"}
+            note="Newest first"
+          />
 
           <div className="mt-6 grid gap-5 md:grid-cols-2">
-            {lists.map((list) => (
-              <ListCard key={list.id} list={list} />
+            {rest.map((list) => (
+              <PinnableCard
+                key={list.id}
+                list={list}
+                isOwn={isOwn}
+                onChange={refreshLists}
+                onError={setPinError}
+              />
             ))}
           </div>
+
+          {rest.length === 0 && (
+            <p className="mt-6 max-w-xl leading-relaxed text-muted">
+              {isOwn
+                ? "Everything you have written is pinned. Write another and it lands here."
+                : "Nothing beyond the pinned ones yet."}
+            </p>
+          )}
         </>
       )}
     </AppShell>
+  );
+}
+
+function SectionHeading({ title, note }) {
+  return (
+    <div className="mt-12 flex items-baseline justify-between gap-4 border-b border-wire pb-3.5">
+      <h2 className="font-display text-lg font-extrabold text-chalk">{title}</h2>
+      <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+        {note}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * A card, plus the pin control when the card is yours.
+ *
+ * The toggle is a sibling of the card rather than a child of it: the card is
+ * one big link, and a button inside a link is neither valid nor clickable in
+ * the way people expect. Sitting on top of it in the same box avoids that
+ * entirely.
+ */
+function PinnableCard({ list, isOwn, highlight, onChange, onError }) {
+  return (
+    <div className="relative h-full">
+      <ListCard list={list} highlight={highlight} />
+      {isOwn && (
+        <div className="absolute right-3 top-3">
+          <PinToggle list={list} onChange={onChange} onError={onError} />
+        </div>
+      )}
+    </div>
   );
 }

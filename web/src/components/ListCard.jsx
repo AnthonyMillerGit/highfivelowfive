@@ -3,14 +3,22 @@ import { cardDate, marker } from "../lib/format";
 import CommentIcon from "./CommentIcon";
 
 /** The card the profile grid and the feed both render. Whatever this shows is
- *  what GET /api/users/:username/lists has to return. */
-export default function ListCard({ list }) {
+ *  what GET /api/users/:username/lists has to return.
+ *
+ *  `highlight` is passed by the pinned shelf rather than read off list.pinned,
+ *  so the card does not have to guess where it is being rendered — a pinned
+ *  list showing up in a feed is just a list. */
+export default function ListCard({ list, highlight = false }) {
   const remaining = list.item_count - list.preview.length;
 
   return (
     <Link
       to={`/u/${list.author.username}/${list.slug}`}
-      className="flex h-full flex-col rounded-lg border border-wire bg-raised p-6 transition-colors hover:border-muted/60"
+      className={`flex h-full flex-col rounded-lg border bg-raised p-6 transition-colors ${
+        highlight
+          ? "border-high/35 hover:border-high/60"
+          : "border-wire hover:border-muted/60"
+      }`}
     >
       <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
         {list.is_ranked ? "Ranked" : "Unranked"} &middot; {list.item_count}{" "}
