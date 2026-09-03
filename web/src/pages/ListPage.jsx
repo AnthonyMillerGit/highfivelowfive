@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../lib/api";
+import { useAuth } from "../context/AuthContext";
 import { fullDate, marker } from "../lib/format";
 import AppShell from "../components/AppShell";
 import Spinner from "../components/Spinner";
@@ -9,6 +10,7 @@ import Monogram from "../components/Monogram";
 
 export default function ListPage() {
   const { username, slug } = useParams();
+  const { user } = useAuth();
   const [list, setList] = useState(null);
   const [error, setError] = useState("");
 
@@ -85,6 +87,19 @@ export default function ListPage() {
         <span>&middot;</span>
         <span>{fullDate(list.created_at)}</span>
       </div>
+
+      {/* Only the author is offered the edit; the API refuses anyone else
+          regardless, so this is about not showing a door that is locked. */}
+      {user?.username === list.author.username && (
+        <Link
+          to={`/u/${list.author.username}/${list.slug}/edit`}
+          className="mt-4 inline-block font-mono text-[11px] uppercase tracking-[0.16em]
+                     text-muted underline decoration-wire underline-offset-4
+                     transition-colors hover:text-high hover:decoration-high"
+        >
+          Edit list
+        </Link>
+      )}
 
       {grouped ? <GroupedItems list={list} /> : <FlatItems list={list} />}
 

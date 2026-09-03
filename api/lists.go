@@ -21,60 +21,54 @@ const (
 	previewSize = 3
 )
 
-type createItemRequest struct {
+type itemRequest struct {
 	Title string  `json:"title"`
 	Label *string `json:"label"`
 	Note  *string `json:"note"`
 }
 
-type createListRequest struct {
-	Title       string              `json:"title"`
-	Description *string             `json:"description"`
-	IsRanked    *bool               `json:"is_ranked"` // pointer: omitted means true
-	Items       []createItemRequest `json:"items"`
+// listRequest is the body of both create and edit. A list is always submitted
+// whole, so there is one shape and one set of rules rather than two that drift
+// apart the first time a limit changes.
+type listRequest struct {
+	Title       string        `json:"title"`
+	Description *string       `json:"description"`
+	IsRanked    *bool         `json:"is_ranked"` // pointer: omitted means true
+	Items       []itemRequest `json:"items"`
 }
 
-// ---------------------------------------------------------------- create
+// errListNotFound covers both "no such list" and "not yours". Callers turn it
+// into the same 404 either way, so nobody can probe for other people's ids.
+var errListNotFound = errors.New("list not found")
 
-func (a *App) handleCreateList(w http.ResponseWriter, r *http.Request) {
-	var req createListRequest
-	if err := decodeJSON(w, r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
-		return
-	}
-
+// normalize trims and range-checks a submitted list in place, returning the
+// message to show its author, or "" when the list is fine.
+func (req *listRequest) normalize() string {
 	req.Title = strings.TrimSpace(req.Title)
 	if req.Title == "" || len(req.Title) > maxTitleLen {
-		writeError(w, http.StatusBadRequest, "a title of 1-200 characters is required")
-		return
+		return "a title of 1-200 characters is required"
 	}
 	if req.Description != nil && len(*req.Description) > maxDescLen {
-		writeError(w, http.StatusBadRequest, "description must be under 2000 characters")
-		return
+		return "description must be under 2000 characters"
 	}
 	if len(req.Items) == 0 {
-		writeError(w, http.StatusBadRequest, "a list needs at least one item")
-		return
+		return "a list needs at least one item"
 	}
 	if len(req.Items) > maxItems {
-		writeError(w, http.StatusBadRequest, "a list can hold at most 100 items")
-		return
+		return "a list can hold at most 100 items"
 	}
 	for i := range req.Items {
 		req.Items[i].Title = strings.TrimSpace(req.Items[i].Title)
 		if req.Items[i].Title == "" || len(req.Items[i].Title) > maxTitleLen {
-			writeError(w, http.StatusBadRequest, "every item needs a title of 1-200 characters")
-			return
+			return "every item needs a title of 1-200 characters"
 		}
 		if req.Items[i].Note != nil && len(*req.Items[i].Note) > maxNoteLen {
-			writeError(w, http.StatusBadRequest, "notes must be under 1000 characters")
-			return
+			return "notes must be under 1000 characters"
 		}
 		if req.Items[i].Label != nil {
 			trimmed := strings.TrimSpace(*req.Items[i].Label)
 			if len(trimmed) > maxLabelLen {
-				writeError(w, http.StatusBadRequest, "labels must be under 40 characters")
-				return
+				return "labels must be under 40 characters"
 			}
 			if trimmed == "" {
 				req.Items[i].Label = nil
@@ -82,6 +76,26 @@ func (a *App) handleCreateList(w http.ResponseWriter, r *http.Request) {
 				req.Items[i].Label = &trimmed
 			}
 		}
+	}
+	return ""
+}
+
+// ranked reads the tri-state IsRanked pointer: absent means ranked.
+func (req *listRequest) ranked() bool {
+	return req.IsRanked == nil || *req.IsRanked
+}
+
+// ---------------------------------------------------------------- create
+
+func (a *App) handleCreateList(w http.ResponseWriter, r *http.Request) {
+	var req listRequest
+	if err := decodeJSON(w, r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if msg := req.normalize(); msg != "" {
+		writeError(w, http.StatusBadRequest, msg)
+		return
 	}
 
 	userID := userIDFrom(r.Context())
@@ -114,7 +128,7 @@ func (a *App) handleCreateList(w http.ResponseWriter, r *http.Request) {
 // insertList writes the list and all its items, or nothing at all. Without a
 // transaction a failure partway through would leave a titled list with half
 // its items — visible to everyone and awkward to detect.
-func (a *App) insertList(ctx context.Context, userID int64, req createListRequest) (List, error) {
+func (a *App) insertList(ctx context.Context, userID int64, req listRequest) (List, error) {
 	var list List
 
 	tx, err := a.DB.Begin(ctx)
@@ -130,37 +144,23 @@ func (a *App) insertList(ctx context.Context, userID int64, req createListReques
 		return list, err
 	}
 
-	isRanked := true
-	if req.IsRanked != nil {
-		isRanked = *req.IsRanked
-	}
-
 	err = tx.QueryRow(ctx, `
 		INSERT INTO lists (user_id, title, slug, description, is_ranked)
 		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, title, slug, description, is_ranked, created_at`,
-		userID, req.Title, slug, req.Description, isRanked,
+		RETURNING id, title, slug, description, is_ranked, created_at,
+		          (SELECT username     FROM users WHERE id = $1),
+		          (SELECT display_name FROM users WHERE id = $1)`,
+		userID, req.Title, slug, req.Description, req.ranked(),
 	).Scan(&list.ID, &list.Title, &list.Slug, &list.Description,
-		&list.IsRanked, &list.CreatedAt)
+		&list.IsRanked, &list.CreatedAt,
+		&list.Author.Username, &list.Author.DisplayName)
 	if err != nil {
 		return list, err
 	}
 
-	// Rank comes from the order the client sent, not from the client itself —
-	// so a caller cannot submit duplicate or negative ranks.
-	list.Items = make([]ListItem, 0, len(req.Items))
-	for i, it := range req.Items {
-		var saved ListItem
-		err = tx.QueryRow(ctx, `
-			INSERT INTO list_items (list_id, rank, label, title, note)
-			VALUES ($1, $2, $3, $4, $5)
-			RETURNING id, rank, label, title, note`,
-			list.ID, i+1, it.Label, it.Title, it.Note,
-		).Scan(&saved.ID, &saved.Rank, &saved.Label, &saved.Title, &saved.Note)
-		if err != nil {
-			return List{}, err
-		}
-		list.Items = append(list.Items, saved)
+	list.Items, err = insertItems(ctx, tx, list.ID, req.Items)
+	if err != nil {
+		return List{}, err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -169,6 +169,27 @@ func (a *App) insertList(ctx context.Context, userID int64, req createListReques
 
 	list.ItemCount = len(list.Items)
 	return list, nil
+}
+
+// insertItems writes a list's rows in the order they arrived. Rank comes from
+// that order rather than from the client, so a caller cannot submit duplicate
+// or negative ranks. Both create and edit lay rows down the same way.
+func insertItems(ctx context.Context, tx pgx.Tx, listID int64, reqs []itemRequest) ([]ListItem, error) {
+	items := make([]ListItem, 0, len(reqs))
+	for i, it := range reqs {
+		var saved ListItem
+		err := tx.QueryRow(ctx, `
+			INSERT INTO list_items (list_id, rank, label, title, note)
+			VALUES ($1, $2, $3, $4, $5)
+			RETURNING id, rank, label, title, note`,
+			listID, i+1, it.Label, it.Title, it.Note,
+		).Scan(&saved.ID, &saved.Rank, &saved.Label, &saved.Title, &saved.Note)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, saved)
+	}
+	return items, nil
 }
 
 // uniqueSlug returns base, or base-2, base-3... — whichever this user has not
@@ -205,6 +226,117 @@ func uniqueSlug(ctx context.Context, tx pgx.Tx, userID int64, base string) (stri
 			return candidate, nil
 		}
 	}
+}
+
+// ------------------------------------------------------------------ edit
+
+func (a *App) handleUpdateList(w http.ResponseWriter, r *http.Request) {
+	listID, err := strconv.ParseInt(chi.URLParam(r, "listID"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad list id")
+		return
+	}
+
+	var req listRequest
+	if err := decodeJSON(w, r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if msg := req.normalize(); msg != "" {
+		writeError(w, http.StatusBadRequest, msg)
+		return
+	}
+
+	list, err := a.updateList(r.Context(), listID, userIDFrom(r.Context()), req)
+	if errors.Is(err, errListNotFound) {
+		writeError(w, http.StatusNotFound, "no such list")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not save the list")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, list)
+}
+
+// updateList rewrites a list in place, or leaves it exactly as it was.
+//
+// The rows are replaced wholesale rather than diffed. Working out which of
+// them moved, changed or vanished would be real work for no gain: nothing in
+// the schema points at a list_items row, so their ids are free to change.
+// Comments hang off the list itself, so an edit leaves the argument intact.
+func (a *App) updateList(ctx context.Context, listID, userID int64, req listRequest) (List, error) {
+	var list List
+
+	tx, err := a.DB.Begin(ctx)
+	if err != nil {
+		return list, err
+	}
+	defer tx.Rollback(ctx)
+
+	// Ownership is a clause of the UPDATE, not a read before it, so there is no
+	// window between "is this yours" and rewriting it. The slug is deliberately
+	// left alone: renaming a list must not break links already shared.
+	err = tx.QueryRow(ctx, `
+		UPDATE lists
+		SET title = $3, description = $4, is_ranked = $5, updated_at = now()
+		WHERE id = $1 AND user_id = $2
+		RETURNING id, title, slug, description, is_ranked, created_at,
+		          (SELECT username     FROM users WHERE id = $2),
+		          (SELECT display_name FROM users WHERE id = $2)`,
+		listID, userID, req.Title, req.Description, req.ranked(),
+	).Scan(&list.ID, &list.Title, &list.Slug, &list.Description,
+		&list.IsRanked, &list.CreatedAt,
+		&list.Author.Username, &list.Author.DisplayName)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return List{}, errListNotFound
+	}
+	if err != nil {
+		return List{}, err
+	}
+
+	if _, err := tx.Exec(ctx, `DELETE FROM list_items WHERE list_id = $1`, list.ID); err != nil {
+		return List{}, err
+	}
+
+	list.Items, err = insertItems(ctx, tx, list.ID, req.Items)
+	if err != nil {
+		return List{}, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return List{}, err
+	}
+
+	list.ItemCount = len(list.Items)
+	return list, nil
+}
+
+func (a *App) handleDeleteList(w http.ResponseWriter, r *http.Request) {
+	listID, err := strconv.ParseInt(chi.URLParam(r, "listID"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad list id")
+		return
+	}
+
+	// A list is deleted outright rather than tombstoned the way a comment is:
+	// nothing has to outlive it. The foreign keys do the rest — list_items and
+	// comments both cascade, so one statement takes the whole thing with it.
+	tag, err := a.DB.Exec(r.Context(),
+		`DELETE FROM lists WHERE id = $1 AND user_id = $2`,
+		listID, userIDFrom(r.Context()))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not delete the list")
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		// Same answer whether it never existed or belongs to someone else.
+		writeError(w, http.StatusNotFound, "no such list")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // ------------------------------------------------------------------ read

@@ -68,6 +68,8 @@ func main() {
 		r.Use(app.RequireAuth)
 		r.Get("/api/auth/me", app.handleMe)
 		r.Post("/api/lists", app.handleCreateList)
+		r.Patch("/api/lists/{listID}", app.handleUpdateList)
+		r.Delete("/api/lists/{listID}", app.handleDeleteList)
 		r.Post("/api/lists/{listID}/comments", app.handleCreateComment)
 		r.Delete("/api/comments/{commentID}", app.handleDeleteComment)
 		r.Get("/api/feed", app.handleFeed)
