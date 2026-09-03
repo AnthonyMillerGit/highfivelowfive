@@ -6,7 +6,7 @@ import { fullDate, marker } from "../lib/format";
 import AppShell from "../components/AppShell";
 import Spinner from "../components/Spinner";
 import Comments from "../components/Comments";
-import Monogram from "../components/Monogram";
+import Avatar from "../components/Avatar";
 import PinToggle from "../components/PinToggle";
 import Alert from "../components/Alert";
 
@@ -63,7 +63,7 @@ export default function ListPage() {
         to={`/u/${list.author.username}`}
         className="flex items-center gap-3 rounded-sm"
       >
-        <Monogram username={list.author.username} size="md" />
+        <Avatar user={list.author} size="md" />
         <span className="flex flex-col gap-0.5">
           {list.author.display_name && (
             <span className="font-display text-[15px] font-bold text-chalk">

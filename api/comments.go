@@ -72,15 +72,18 @@ func (a *App) handleCreateComment(w http.ResponseWriter, r *http.Request) {
 			VALUES ($1, $2, $3, $4)
 			RETURNING id, body, parent_id, created_at, user_id
 		)
-		SELECT i.id, i.body, i.parent_id, i.created_at, u.username, u.display_name
+		SELECT i.id, i.body, i.parent_id, i.created_at,
+		       u.username, u.display_name, u.avatar_path
 		FROM inserted i JOIN users u ON u.id = i.user_id`,
 		listID, userID, parentID, req.Body,
-	).Scan(&c.ID, &body, &c.ParentID, &c.CreatedAt, &author.Username, &author.DisplayName)
+	).Scan(&c.ID, &body, &c.ParentID, &c.CreatedAt, &author.Username,
+		&author.DisplayName, &author.AvatarURL)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not post the comment")
 		return
 	}
 
+	author.AvatarURL = a.avatarURL(author.AvatarURL)
 	c.Body = &body
 	c.Author = &author
 	c.Replies = []Comment{}
@@ -131,7 +134,7 @@ func (a *App) handleListComments(w http.ResponseWriter, r *http.Request) {
 	// in a single pass.
 	rows, err := a.DB.Query(r.Context(), `
 		SELECT c.id, c.body, c.parent_id, c.created_at, c.deleted_at IS NOT NULL,
-		       u.username, u.display_name
+		       u.username, u.display_name, u.avatar_path
 		FROM comments c
 		JOIN users u ON u.id = c.user_id
 		WHERE c.list_id = $1
@@ -150,13 +153,14 @@ func (a *App) handleListComments(w http.ResponseWriter, r *http.Request) {
 		var body string
 		var author Author
 		if err := rows.Scan(&c.ID, &body, &c.ParentID, &c.CreatedAt, &c.Deleted,
-			&author.Username, &author.DisplayName); err != nil {
+			&author.Username, &author.DisplayName, &author.AvatarURL); err != nil {
 			writeError(w, http.StatusInternalServerError, "could not load comments")
 			return
 		}
 		// A removed comment keeps its place in the thread but gives up its
 		// text and its author — neither is sent to the client at all.
 		if !c.Deleted {
+			author.AvatarURL = a.avatarURL(author.AvatarURL)
 			c.Body = &body
 			c.Author = &author
 		}

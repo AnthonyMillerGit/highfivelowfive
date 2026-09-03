@@ -23,7 +23,12 @@ export class ApiError extends Error {
  */
 export async function api(path, { method = "GET", body, auth = true } = {}) {
   const headers = {};
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+
+  // A file upload is a FormData, and the browser has to set its own
+  // Content-Type: multipart needs a boundary string only fetch knows. Setting
+  // the header by hand here would produce a body the server cannot parse.
+  const isForm = typeof FormData !== "undefined" && body instanceof FormData;
+  if (body !== undefined && !isForm) headers["Content-Type"] = "application/json";
 
   const token = tokenStore.get();
   if (auth && token) headers["Authorization"] = `Bearer ${token}`;
@@ -31,7 +36,7 @@ export async function api(path, { method = "GET", body, auth = true } = {}) {
   const res = await fetch(`${BASE}${path}`, {
     method,
     headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
   });
 
   if (res.status === 204) return null;

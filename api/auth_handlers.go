@@ -107,11 +107,12 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	var u User
 	var hash string
 	err := a.DB.QueryRow(r.Context(), `
-		SELECT id, email, username, display_name, bio, created_at, password_hash
+		SELECT id, email, username, display_name, bio, avatar_path, created_at, password_hash
 		FROM users
 		WHERE email = $1 OR username = $1`,
 		req.Identifier,
-	).Scan(&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.Bio, &u.CreatedAt, &hash)
+	).Scan(&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.Bio, &u.AvatarURL,
+		&u.CreatedAt, &hash)
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Burn roughly the same time bcrypt would have taken on a real user, so
@@ -124,6 +125,8 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "could not sign in")
 		return
 	}
+
+	u.AvatarURL = a.avatarURL(u.AvatarURL)
 
 	if !CheckPassword(hash, req.Password) {
 		// Same message as "no such user" on purpose: never confirm which half
@@ -151,9 +154,12 @@ func (a *App) handleMe(w http.ResponseWriter, r *http.Request) {
 func (a *App) userByID(ctx context.Context, id int64) (User, error) {
 	var u User
 	err := a.DB.QueryRow(ctx, `
-		SELECT id, email, username, display_name, bio, created_at
+		SELECT id, email, username, display_name, bio, avatar_path, created_at
 		FROM users WHERE id = $1`, id,
-	).Scan(&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.Bio, &u.CreatedAt)
+	).Scan(&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.Bio,
+		&u.AvatarURL, &u.CreatedAt)
+	// The column holds a filename; everything outside this package wants a URL.
+	u.AvatarURL = a.avatarURL(u.AvatarURL)
 	return u, err
 }
 

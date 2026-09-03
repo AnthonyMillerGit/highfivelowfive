@@ -47,6 +47,12 @@ func main() {
 
 	r.Get("/health", app.handleHealth)
 
+	// Uploaded avatars. Everything under here was written by this server as a
+	// JPEG it encoded itself, so there is no user-authored markup to be served
+	// back and interpreted — nosniff keeps it that way for nothing.
+	r.Handle("/media/*", http.StripPrefix("/media/",
+		mediaHeaders(http.FileServer(http.Dir(cfg.MediaDir)))))
+
 	// Public: anyone may sign up or sign in.
 	r.Post("/api/auth/signup", app.handleSignup)
 	r.Post("/api/auth/login", app.handleLogin)
@@ -67,6 +73,8 @@ func main() {
 	r.Group(func(r chi.Router) {
 		r.Use(app.RequireAuth)
 		r.Get("/api/auth/me", app.handleMe)
+		r.Post("/api/me/avatar", app.handleUploadAvatar)
+		r.Delete("/api/me/avatar", app.handleDeleteAvatar)
 		r.Post("/api/lists", app.handleCreateList)
 		r.Patch("/api/lists/{listID}", app.handleUpdateList)
 		r.Delete("/api/lists/{listID}", app.handleDeleteList)
@@ -113,4 +121,16 @@ func (a *App) handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, code, body)
+}
+
+// mediaHeaders wraps the file server for uploaded media.
+//
+// The filename changes every time a picture does, so a cached copy can never
+// be stale — which makes it safe to tell browsers to keep it forever.
+func mediaHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		next.ServeHTTP(w, r)
+	})
 }

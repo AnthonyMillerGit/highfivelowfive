@@ -14,6 +14,13 @@ type Config struct {
 	Port        string
 	JWTSecret   string
 	CORSOrigin  string
+
+	// Where uploaded pictures are written, and the origin they are served
+	// from. These two are the whole seam between "avatars live on this disk"
+	// and "avatars live in object storage" — nothing else knows the
+	// difference, and no stored row mentions a host.
+	MediaDir      string
+	PublicBaseURL string
 }
 
 func LoadConfig() Config {
@@ -32,6 +39,11 @@ func LoadConfig() Config {
 		Port:        envOr("PORT", "8081"),
 		JWTSecret:   os.Getenv("JWT_SECRET"),
 		CORSOrigin:  envOr("CORS_ORIGIN", "http://localhost:5173"),
+
+		// The API runs from api/, so the default puts media beside it at the
+		// project root rather than inside the Go package.
+		MediaDir:      envOr("MEDIA_DIR", "../media"),
+		PublicBaseURL: envOr("PUBLIC_BASE_URL", "http://localhost:8081"),
 	}
 
 	// Fail loudly at boot rather than mysteriously on the first request.

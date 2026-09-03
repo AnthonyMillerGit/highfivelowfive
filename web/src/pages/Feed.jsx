@@ -4,7 +4,7 @@ import { api } from "../lib/api";
 import { relativeTime } from "../lib/format";
 import AppShell from "../components/AppShell";
 import ListCard from "../components/ListCard";
-import Monogram from "../components/Monogram";
+import Avatar from "../components/Avatar";
 import Spinner from "../components/Spinner";
 
 export default function Feed() {
@@ -44,7 +44,7 @@ export default function Feed() {
             {/* Attribution sits outside the card: the card is the list, this
                 line is why the list is in front of you. */}
             <div className="mb-2.5 flex items-center gap-2.5">
-              <Monogram username={list.author.username} tone="muted" />
+              <Avatar user={list.author} tone="muted" />
               <Link
                 to={`/u/${list.author.username}`}
                 className="font-mono text-xs text-chalk transition-colors hover:text-high"

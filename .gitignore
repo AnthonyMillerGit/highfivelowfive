@@ -10,6 +10,9 @@ node_modules/
 web/dist/
 web/.vite/
 
+# uploaded avatars — user data, not source; MEDIA_DIR points here by default
+media/
+
 # os
 .DS_Store
 

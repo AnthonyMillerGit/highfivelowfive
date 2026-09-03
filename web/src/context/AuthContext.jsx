@@ -41,6 +41,10 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     status,
+    // Handed the server's updated user after something changes it — a new
+    // profile picture, today. The server's copy replaces ours wholesale
+    // rather than being patched field by field here.
+    updateUser: setUser,
     signup: (body) => authenticate("/api/auth/signup", body),
     login: (identifier, password) =>
       authenticate("/api/auth/login", { identifier, password }),

@@ -430,7 +430,7 @@ func (a *App) handleUnpinList(w http.ResponseWriter, r *http.Request) {
 const listCardSelect = `
 	SELECT l.id, l.title, l.slug, l.description, l.is_ranked, l.created_at,
 	       l.pinned_at IS NOT NULL,
-	       u.username, u.display_name,
+	       u.username, u.display_name, u.avatar_path,
 	       (SELECT COUNT(*) FROM list_items li WHERE li.list_id = l.id),
 	       (SELECT COUNT(*) FROM comments   c  WHERE c.list_id  = l.id AND c.deleted_at IS NULL)
 	FROM lists l
@@ -454,9 +454,10 @@ func (a *App) loadCards(ctx context.Context, sql string, args ...any) ([]List, e
 		var l List
 		if err := rows.Scan(&l.ID, &l.Title, &l.Slug, &l.Description, &l.IsRanked,
 			&l.CreatedAt, &l.Pinned, &l.Author.Username, &l.Author.DisplayName,
-			&l.ItemCount, &l.CommentCount); err != nil {
+			&l.Author.AvatarURL, &l.ItemCount, &l.CommentCount); err != nil {
 			return nil, err
 		}
+		l.Author.AvatarURL = a.avatarURL(l.Author.AvatarURL)
 		l.Preview = []ListItem{}
 		byID[l.ID] = len(lists)
 		ids = append(ids, l.ID)
@@ -569,14 +570,15 @@ func (a *App) handleList(w http.ResponseWriter, r *http.Request) {
 	err := a.DB.QueryRow(r.Context(), `
 		SELECT l.id, l.title, l.slug, l.description, l.is_ranked, l.created_at,
 		       l.pinned_at IS NOT NULL,
-		       u.username, u.display_name,
+		       u.username, u.display_name, u.avatar_path,
 		       (SELECT COUNT(*) FROM comments c WHERE c.list_id = l.id AND c.deleted_at IS NULL)
 		FROM lists l
 		JOIN users u ON u.id = l.user_id
 		WHERE u.username = $1 AND l.slug = $2 AND l.is_public`,
 		username, slug,
 	).Scan(&l.ID, &l.Title, &l.Slug, &l.Description, &l.IsRanked, &l.CreatedAt,
-		&l.Pinned, &l.Author.Username, &l.Author.DisplayName, &l.CommentCount)
+		&l.Pinned, &l.Author.Username, &l.Author.DisplayName, &l.Author.AvatarURL,
+		&l.CommentCount)
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		writeError(w, http.StatusNotFound, "no such list")
@@ -586,6 +588,7 @@ func (a *App) handleList(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "could not load the list")
 		return
 	}
+	l.Author.AvatarURL = a.avatarURL(l.Author.AvatarURL)
 
 	rows, err := a.DB.Query(r.Context(), `
 		SELECT id, rank, label, title, note FROM list_items
@@ -625,7 +628,7 @@ func (a *App) handleProfile(w http.ResponseWriter, r *http.Request) {
 
 	var p Profile
 	err := a.DB.QueryRow(r.Context(), `
-		SELECT u.username, u.display_name, u.bio,
+		SELECT u.username, u.display_name, u.bio, u.avatar_path,
 		       (SELECT COUNT(*) FROM lists   l WHERE l.user_id     = u.id AND l.is_public),
 		       (SELECT COUNT(*) FROM follows f WHERE f.followee_id = u.id),
 		       (SELECT COUNT(*) FROM follows f WHERE f.follower_id = u.id),
@@ -633,7 +636,7 @@ func (a *App) handleProfile(w http.ResponseWriter, r *http.Request) {
 		               WHERE f.follower_id = $2 AND f.followee_id = u.id),
 		       u.id = $2
 		FROM users u WHERE u.username = $1`, username, viewerID,
-	).Scan(&p.Username, &p.DisplayName, &p.Bio, &p.ListCount,
+	).Scan(&p.Username, &p.DisplayName, &p.Bio, &p.AvatarURL, &p.ListCount,
 		&p.FollowerCount, &p.FollowingCount, &p.IsFollowing, &p.IsSelf)
 
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -644,5 +647,6 @@ func (a *App) handleProfile(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "could not load the profile")
 		return
 	}
+	p.AvatarURL = a.avatarURL(p.AvatarURL)
 	writeJSON(w, http.StatusOK, p)
 }

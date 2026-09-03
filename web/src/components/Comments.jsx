@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { relativeTime } from "../lib/format";
-import Monogram from "./Monogram";
+import Avatar from "./Avatar";
 import CommentComposer from "./CommentComposer";
 import Spinner from "./Spinner";
 
@@ -32,7 +32,7 @@ function Comment({ comment, currentUser, onReply, onDelete, isReply = false }) {
 
   return (
     <div className="flex gap-3">
-      <Monogram username={comment.author.username} tone={isMine ? "high" : "muted"} />
+      <Avatar user={comment.author} tone={isMine ? "high" : "muted"} />
 
       <div className="flex grow flex-col gap-1.5">
         <div className="flex items-baseline gap-2.5">

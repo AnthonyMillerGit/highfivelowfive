@@ -5,7 +5,8 @@ import { useAuth } from "../context/AuthContext";
 import AppShell from "../components/AppShell";
 import ListCard from "../components/ListCard";
 import Spinner from "../components/Spinner";
-import Monogram from "../components/Monogram";
+import Avatar from "../components/Avatar";
+import AvatarUploader from "../components/AvatarUploader";
 import FollowButton from "../components/FollowButton";
 import PinToggle from "../components/PinToggle";
 import Alert from "../components/Alert";
@@ -18,7 +19,7 @@ const MAX_PINNED = 3;
  *  component because the page is the same page — only the empty state and the
  *  header actions differ. */
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const params = useParams();
   const username = params.username ?? user?.username;
   const isOwn = user?.username === username;
@@ -81,7 +82,19 @@ export default function Profile() {
   return (
     <AppShell wide>
       <div className="flex items-start gap-6">
-        <Monogram username={profile.username} size="lg" />
+        {/* Your own face is the one you can change. Everyone else's is just
+            shown — there is no edit affordance to explain away. */}
+        {isOwn && user ? (
+          <AvatarUploader
+            user={user}
+            onChange={(updated) => {
+              updateUser(updated);
+              setProfile((prev) => ({ ...prev, avatar_url: updated.avatar_url }));
+            }}
+          />
+        ) : (
+          <Avatar user={profile} size="lg" />
+        )}
 
         <div className="flex grow flex-col gap-2">
           <div className="flex items-baseline gap-3">

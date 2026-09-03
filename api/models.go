@@ -10,6 +10,7 @@ type User struct {
 	Username    string    `json:"username"`
 	DisplayName *string   `json:"display_name"`
 	Bio         *string   `json:"bio"`
+	AvatarURL   *string   `json:"avatar_url"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
@@ -17,6 +18,7 @@ type User struct {
 type Author struct {
 	Username    string  `json:"username"`
 	DisplayName *string `json:"display_name"`
+	AvatarURL   *string `json:"avatar_url"`
 }
 
 // Profile is a user's public page header. IsFollowing and IsSelf are answered
@@ -25,6 +27,7 @@ type Profile struct {
 	Username       string  `json:"username"`
 	DisplayName    *string `json:"display_name"`
 	Bio            *string `json:"bio"`
+	AvatarURL      *string `json:"avatar_url"`
 	ListCount      int     `json:"list_count"`
 	FollowerCount  int     `json:"follower_count"`
 	FollowingCount int     `json:"following_count"`
