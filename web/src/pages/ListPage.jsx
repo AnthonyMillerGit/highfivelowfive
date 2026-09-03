@@ -6,6 +6,7 @@ import { fullDate, marker } from "../lib/format";
 import AppShell from "../components/AppShell";
 import Spinner from "../components/Spinner";
 import Comments from "../components/Comments";
+import Takes from "../components/Takes";
 import Avatar from "../components/Avatar";
 import PinToggle from "../components/PinToggle";
 import Alert from "../components/Alert";
@@ -74,6 +75,18 @@ export default function ListPage() {
         </span>
       </Link>
 
+      {list.origin && (
+        <p className="mt-6 text-sm text-muted">
+          A take on{" "}
+          <Link
+            to={`/u/${list.origin.username}/${list.origin.slug}`}
+            className="text-high underline decoration-high/40 underline-offset-4 transition-colors hover:decoration-high"
+          >
+            @{list.origin.username}&rsquo;s {list.origin.title}
+          </Link>
+        </p>
+      )}
+
       <h1 className="mt-7 font-display text-4xl font-extrabold leading-[1.12]">
         {list.title}
       </h1>
@@ -90,6 +103,14 @@ export default function ListPage() {
         </span>
         <span>&middot;</span>
         <span>{fullDate(list.created_at)}</span>
+        {list.take_count > 0 && (
+          <>
+            <span>&middot;</span>
+            <span className="text-high">
+              {list.take_count} {list.take_count === 1 ? "take" : "takes"}
+            </span>
+          </>
+        )}
       </div>
 
       {/* Only the author is offered these; the API refuses anyone else
@@ -117,6 +138,21 @@ export default function ListPage() {
       )}
 
       {grouped ? <GroupedItems list={list} /> : <FlatItems list={list} />}
+
+      {/* Not offered on your own list: you already answered this one, and the
+          owner's corner is busy enough. */}
+      {user && user.username !== list.author.username && (
+        <Link
+          to={`/u/${list.author.username}/${list.slug}/take`}
+          className="mt-8 inline-block rounded-md border border-high/50 bg-high/10 px-5 py-2.5
+                     font-display text-[13px] font-bold text-high transition-colors
+                     hover:bg-high/20"
+        >
+          Make your take
+        </Link>
+      )}
+
+      <Takes listId={list.id} count={list.take_count} />
 
       <Comments listId={list.id} />
     </AppShell>

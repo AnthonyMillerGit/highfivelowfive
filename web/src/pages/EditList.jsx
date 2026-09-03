@@ -1,47 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
+import { shapeOf } from "../lib/shape";
 import { useAuth } from "../context/AuthContext";
 import AppShell from "../components/AppShell";
 import Builder from "../components/Builder";
 import Spinner from "../components/Spinner";
 import Alert from "../components/Alert";
-
-/**
- * Turn a saved list back into the shape the builder opens with.
- *
- * A tier list is recognised the same way the list page recognises one: a label
- * used by more than one row is a group heading. That rule lives in the data
- * rather than in a column, so reading it back has to ask the same question.
- */
-function shapeOf(list) {
-  const counts = {};
-  for (const item of list.items) {
-    if (item.label) counts[item.label] = (counts[item.label] ?? 0) + 1;
-  }
-  const grouped = Object.values(counts).some((n) => n > 1);
-
-  // A grouped list is drawn tier by tier, and a tier only shows the rows whose
-  // label matches it exactly. So an unlabelled row in an otherwise grouped
-  // list has to be given a group to sit in, or it would be invisible in the
-  // form and quietly disappear when saved. It gets the blank one, alongside
-  // every other row that never had a label. The server trims it back to null.
-  const groupOf = (item) => (grouped ? item.label ?? "" : item.label);
-
-  return {
-    ranked: list.is_ranked,
-    titlePlaceholder: list.title,
-    rows: list.items.map((item) => ({
-      label: groupOf(item),
-      title: item.title,
-      note: item.note ?? "",
-    })),
-    // Tiers in the order they were saved in, which is the order they were
-    // published in. A tier nobody put anything in was dropped on the way in,
-    // so it does not come back.
-    groups: grouped ? [...new Set(list.items.map(groupOf))] : null,
-  };
-}
 
 export default function EditList() {
   const { username, slug } = useParams();

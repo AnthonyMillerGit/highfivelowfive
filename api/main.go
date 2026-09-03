@@ -61,6 +61,7 @@ func main() {
 	r.Get("/api/users/{username}/lists", app.handleUserLists)
 	r.Get("/api/users/{username}/lists/{slug}", app.handleList)
 	r.Get("/api/lists/{listID}/comments", app.handleListComments)
+	r.Get("/api/lists/{listID}/takes", app.handleListTakes)
 
 	// Public, but better with a viewer: the profile reports whether the caller
 	// already follows this person, which needs a name when there is one.
@@ -82,6 +83,7 @@ func main() {
 		r.Post("/api/lists/{listID}/pin", app.handlePinList)
 		r.Delete("/api/lists/{listID}/pin", app.handleUnpinList)
 		r.Post("/api/lists/{listID}/comments", app.handleCreateComment)
+		r.Post("/api/lists/{listID}/takes", app.handleCreateTake)
 		r.Delete("/api/comments/{commentID}", app.handleDeleteComment)
 		r.Get("/api/feed", app.handleFeed)
 		r.Post("/api/users/{username}/follow", app.handleFollow)

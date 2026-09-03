@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { api } from "../lib/api";
-import { relativeTime } from "../lib/format";
 import AppShell from "../components/AppShell";
-import ListCard from "../components/ListCard";
-import Avatar from "../components/Avatar";
+import AuthoredCard from "../components/AuthoredCard";
 import Spinner from "../components/Spinner";
 
 export default function Feed() {
@@ -40,24 +37,15 @@ export default function Feed() {
 
       <div className="mt-8 flex flex-col gap-7">
         {lists?.map((list) => (
-          <div key={list.id}>
-            {/* Attribution sits outside the card: the card is the list, this
-                line is why the list is in front of you. */}
-            <div className="mb-2.5 flex items-center gap-2.5">
-              <Avatar user={list.author} tone="muted" />
-              <Link
-                to={`/u/${list.author.username}`}
-                className="font-mono text-xs text-chalk transition-colors hover:text-high"
-              >
-                @{list.author.username}
-              </Link>
-              <span className="text-sm text-muted">published a list</span>
-              <span className="font-mono text-[11px] text-muted">
-                &middot; {relativeTime(list.created_at)}
-              </span>
-            </div>
-            <ListCard list={list} />
-          </div>
+          <AuthoredCard
+            key={list.id}
+            list={list}
+            verb={
+              list.origin
+                ? `took on @${list.origin.username}'s list`
+                : "published a list"
+            }
+          />
         ))}
       </div>
     </AppShell>

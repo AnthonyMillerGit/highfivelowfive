@@ -35,6 +35,15 @@ type Profile struct {
 	IsSelf         bool    `json:"is_self"`
 }
 
+// ListRef points at another list without dragging the whole thing along —
+// enough to name it and link to it, which is all a take needs to say what it
+// is answering.
+type ListRef struct {
+	Username string `json:"username"`
+	Slug     string `json:"slug"`
+	Title    string `json:"title"`
+}
+
 type ListItem struct {
 	ID   int64 `json:"id"`
 	Rank int   `json:"rank"`
@@ -55,13 +64,17 @@ type List struct {
 	Description *string `json:"description"`
 	IsRanked    bool    `json:"is_ranked"`
 	// Pinned means the author put this near the top of their profile.
-	Pinned       bool       `json:"pinned"`
-	ItemCount    int        `json:"item_count"`
-	CommentCount int        `json:"comment_count"`
-	CreatedAt    time.Time  `json:"created_at"`
-	Author       Author     `json:"author"`
-	Preview      []ListItem `json:"preview,omitempty"`
-	Items        []ListItem `json:"items,omitempty"`
+	Pinned       bool `json:"pinned"`
+	ItemCount    int  `json:"item_count"`
+	CommentCount int  `json:"comment_count"`
+	// TakeCount is how many people answered this list; Origin is what this
+	// list is itself an answer to, and is nil for a list that started its own.
+	TakeCount int        `json:"take_count"`
+	Origin    *ListRef   `json:"origin"`
+	CreatedAt time.Time  `json:"created_at"`
+	Author    Author     `json:"author"`
+	Preview   []ListItem `json:"preview,omitempty"`
+	Items     []ListItem `json:"items,omitempty"`
 }
 
 // Comment is one entry in a list's discussion. Threading is one level deep:

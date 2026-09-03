@@ -5,6 +5,7 @@ import Profile from "./pages/Profile";
 import ListPage from "./pages/ListPage";
 import NewList from "./pages/NewList";
 import EditList from "./pages/EditList";
+import NewTake from "./pages/NewTake";
 import Feed from "./pages/Feed";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -34,6 +35,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Feed />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/u/:username/:slug/take"
+            element={
+              <ProtectedRoute>
+                <NewTake />
               </ProtectedRoute>
             }
           />

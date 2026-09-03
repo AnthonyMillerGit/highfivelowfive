@@ -38,6 +38,11 @@ export default function Builder({
   submitLabel,
   onSubmit,
   children,
+  // A take on an ordinary list has to have exactly the rows the original had,
+  // and the server refuses anything else. The form should not offer what would
+  // then be rejected, so adding and removing simply are not there — the rows
+  // are the question, and answering it is filling them in.
+  fixedRows = false,
 }) {
   // Rows need identities that survive reordering. Using the array index as a
   // React key would make the inputs lose focus and swap values mid-typing when
@@ -225,21 +230,23 @@ export default function Builder({
                     onUp={() => swap(i, i - 1)}
                     onDown={() => swap(i, i + 1)}
                     onRemove={removeItem}
-                    canRemove={items.length > 1}
+                    canRemove={!fixedRows && items.length > 1}
                   />
                 ))}
               </ol>
 
-              <button
-                type="button"
-                onClick={() => addItem()}
-                disabled={items.length >= MAX_ITEMS}
-                className="mt-4 w-full rounded-md border border-dashed border-wire py-2.5
-                           font-display text-[13px] font-bold text-muted transition-colors
-                           hover:border-muted/60 hover:text-chalk disabled:opacity-40"
-              >
-                Add item
-              </button>
+              {!fixedRows && (
+                <button
+                  type="button"
+                  onClick={() => addItem()}
+                  disabled={items.length >= MAX_ITEMS}
+                  className="mt-4 w-full rounded-md border border-dashed border-wire py-2.5
+                             font-display text-[13px] font-bold text-muted transition-colors
+                             hover:border-muted/60 hover:text-chalk disabled:opacity-40"
+                >
+                  Add item
+                </button>
+              )}
             </>
           )}
         </div>

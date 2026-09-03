@@ -104,23 +104,7 @@ func (a *App) handleCreateList(w http.ResponseWriter, r *http.Request) {
 
 	userID := userIDFrom(r.Context())
 
-	// The slug is derived from the title, so two lists named the same thing
-	// race for it. insertList picks the first free slug inside its
-	// transaction; if a concurrent create takes it between the check and the
-	// insert, the unique constraint rejects us and we simply try again.
-	var list List
-	var err error
-	for attempt := 0; attempt < 3; attempt++ {
-		list, err = a.insertList(r.Context(), userID, req)
-		if err == nil {
-			break
-		}
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			continue
-		}
-		break
-	}
+	list, err := a.createListWithRetry(r.Context(), userID, req, nil)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not save the list")
 		return
@@ -129,10 +113,33 @@ func (a *App) handleCreateList(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, list)
 }
 
+// createListWithRetry writes a list, and writes it again if it lost a race.
+//
+// The slug is derived from the title, so two lists named the same thing race
+// for it. insertList picks the first free slug inside its transaction; if a
+// concurrent create takes that slug between the check and the insert, the
+// unique constraint rejects us and trying again simply picks the next one.
+func (a *App) createListWithRetry(ctx context.Context, userID int64, req listRequest, originID *int64) (List, error) {
+	var list List
+	var err error
+	for attempt := 0; attempt < 3; attempt++ {
+		list, err = a.insertList(ctx, userID, req, originID)
+		if err == nil {
+			return list, nil
+		}
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			continue
+		}
+		break
+	}
+	return list, err
+}
+
 // insertList writes the list and all its items, or nothing at all. Without a
 // transaction a failure partway through would leave a titled list with half
 // its items — visible to everyone and awkward to detect.
-func (a *App) insertList(ctx context.Context, userID int64, req listRequest) (List, error) {
+func (a *App) insertList(ctx context.Context, userID int64, req listRequest, originID *int64) (List, error) {
 	var list List
 
 	tx, err := a.DB.Begin(ctx)
@@ -149,12 +156,12 @@ func (a *App) insertList(ctx context.Context, userID int64, req listRequest) (Li
 	}
 
 	err = tx.QueryRow(ctx, `
-		INSERT INTO lists (user_id, title, slug, description, is_ranked)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO lists (user_id, title, slug, description, is_ranked, origin_id)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id, title, slug, description, is_ranked, created_at,
 		          (SELECT username     FROM users WHERE id = $1),
 		          (SELECT display_name FROM users WHERE id = $1)`,
-		userID, req.Title, slug, req.Description, req.ranked(),
+		userID, req.Title, slug, req.Description, req.ranked(), originID,
 	).Scan(&list.ID, &list.Title, &list.Slug, &list.Description,
 		&list.IsRanked, &list.CreatedAt,
 		&list.Author.Username, &list.Author.DisplayName)
@@ -432,9 +439,13 @@ const listCardSelect = `
 	       l.pinned_at IS NOT NULL,
 	       u.username, u.display_name, u.avatar_path,
 	       (SELECT COUNT(*) FROM list_items li WHERE li.list_id = l.id),
-	       (SELECT COUNT(*) FROM comments   c  WHERE c.list_id  = l.id AND c.deleted_at IS NULL)
+	       (SELECT COUNT(*) FROM comments   c  WHERE c.list_id  = l.id AND c.deleted_at IS NULL),
+	       (SELECT COUNT(*) FROM lists      t  WHERE t.origin_id = l.id AND t.is_public),
+	       ou.username, o.slug, o.title
 	FROM lists l
 	JOIN users u ON u.id = l.user_id
+	LEFT JOIN lists o  ON o.id = l.origin_id
+	LEFT JOIN users ou ON ou.id = o.user_id
 	`
 
 // loadCards runs a listCardSelect-shaped query and fills in every card's
@@ -452,12 +463,15 @@ func (a *App) loadCards(ctx context.Context, sql string, args ...any) ([]List, e
 
 	for rows.Next() {
 		var l List
+		var originUser, originSlug, originTitle *string
 		if err := rows.Scan(&l.ID, &l.Title, &l.Slug, &l.Description, &l.IsRanked,
 			&l.CreatedAt, &l.Pinned, &l.Author.Username, &l.Author.DisplayName,
-			&l.Author.AvatarURL, &l.ItemCount, &l.CommentCount); err != nil {
+			&l.Author.AvatarURL, &l.ItemCount, &l.CommentCount, &l.TakeCount,
+			&originUser, &originSlug, &originTitle); err != nil {
 			return nil, err
 		}
 		l.Author.AvatarURL = a.avatarURL(l.Author.AvatarURL)
+		l.Origin = listRef(originUser, originSlug, originTitle)
 		l.Preview = []ListItem{}
 		byID[l.ID] = len(lists)
 		ids = append(ids, l.ID)
@@ -567,18 +581,24 @@ func (a *App) handleList(w http.ResponseWriter, r *http.Request) {
 	slug := chi.URLParam(r, "slug")
 
 	var l List
+	var originUser, originSlug, originTitle *string
 	err := a.DB.QueryRow(r.Context(), `
 		SELECT l.id, l.title, l.slug, l.description, l.is_ranked, l.created_at,
 		       l.pinned_at IS NOT NULL,
 		       u.username, u.display_name, u.avatar_path,
-		       (SELECT COUNT(*) FROM comments c WHERE c.list_id = l.id AND c.deleted_at IS NULL)
+		       (SELECT COUNT(*) FROM comments c WHERE c.list_id = l.id AND c.deleted_at IS NULL),
+		       (SELECT COUNT(*) FROM lists    t WHERE t.origin_id = l.id AND t.is_public),
+		       ou.username, o.slug, o.title
 		FROM lists l
 		JOIN users u ON u.id = l.user_id
+		LEFT JOIN lists o  ON o.id = l.origin_id
+		LEFT JOIN users ou ON ou.id = o.user_id
 		WHERE u.username = $1 AND l.slug = $2 AND l.is_public`,
 		username, slug,
 	).Scan(&l.ID, &l.Title, &l.Slug, &l.Description, &l.IsRanked, &l.CreatedAt,
 		&l.Pinned, &l.Author.Username, &l.Author.DisplayName, &l.Author.AvatarURL,
-		&l.CommentCount)
+		&l.CommentCount, &l.TakeCount,
+		&originUser, &originSlug, &originTitle)
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		writeError(w, http.StatusNotFound, "no such list")
@@ -589,6 +609,7 @@ func (a *App) handleList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	l.Author.AvatarURL = a.avatarURL(l.Author.AvatarURL)
+	l.Origin = listRef(originUser, originSlug, originTitle)
 
 	rows, err := a.DB.Query(r.Context(), `
 		SELECT id, rank, label, title, note FROM list_items
