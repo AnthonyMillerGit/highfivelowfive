@@ -73,6 +73,7 @@ func main() {
 	r.Group(func(r chi.Router) {
 		r.Use(app.RequireAuth)
 		r.Get("/api/auth/me", app.handleMe)
+		r.Patch("/api/me", app.handleUpdateMe)
 		r.Post("/api/me/avatar", app.handleUploadAvatar)
 		r.Delete("/api/me/avatar", app.handleDeleteAvatar)
 		r.Post("/api/lists", app.handleCreateList)

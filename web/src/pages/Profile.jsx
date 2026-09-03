@@ -7,6 +7,7 @@ import ListCard from "../components/ListCard";
 import Spinner from "../components/Spinner";
 import Avatar from "../components/Avatar";
 import AvatarUploader from "../components/AvatarUploader";
+import ProfileEditor from "../components/ProfileEditor";
 import FollowButton from "../components/FollowButton";
 import PinToggle from "../components/PinToggle";
 import Alert from "../components/Alert";
@@ -28,6 +29,7 @@ export default function Profile() {
   const [lists, setLists] = useState(null);
   const [error, setError] = useState("");
   const [pinError, setPinError] = useState("");
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     if (!username) return;
@@ -35,6 +37,7 @@ export default function Profile() {
     setLists(null);
     setError("");
     setPinError("");
+    setEditing(false);
 
     // Both requests go out together rather than in sequence — they do not
     // depend on each other, so waiting for the first would just be slower.
@@ -96,6 +99,21 @@ export default function Profile() {
           <Avatar user={profile} size="lg" />
         )}
 
+        {editing ? (
+          <ProfileEditor
+            profile={profile}
+            onCancel={() => setEditing(false)}
+            onSaved={(updated) => {
+              updateUser(updated);
+              setProfile((prev) => ({
+                ...prev,
+                display_name: updated.display_name,
+                bio: updated.bio,
+              }));
+              setEditing(false);
+            }}
+          />
+        ) : (
         <div className="flex grow flex-col gap-2">
           <div className="flex items-baseline gap-3">
             <h1 className="font-display text-3xl font-extrabold">
@@ -104,9 +122,30 @@ export default function Profile() {
             {profile.display_name && (
               <span className="font-mono text-[13px] text-muted">@{profile.username}</span>
             )}
+            {isOwn && (
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted
+                           underline decoration-wire underline-offset-4 transition-colors
+                           hover:text-high hover:decoration-high"
+              >
+                Edit
+              </button>
+            )}
           </div>
-          {profile.bio && (
+          {profile.bio ? (
             <p className="max-w-xl leading-relaxed text-chalk">{profile.bio}</p>
+          ) : (
+            isOwn && (
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="max-w-xl text-left leading-relaxed text-muted transition-colors hover:text-chalk"
+              >
+                Say what you rank, and what you will not be argued out of.
+              </button>
+            )
           )}
           <div className="mt-2 flex gap-7">
             {[
@@ -123,6 +162,7 @@ export default function Profile() {
             ))}
           </div>
         </div>
+        )}
 
         {/* Only shown to a signed-in visitor looking at somebody else. */}
         {user && !profile.is_self && (

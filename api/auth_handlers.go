@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -139,6 +140,80 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 // ---------------------------------------------------------------------- me
+
+const (
+	maxDisplayNameLen = 50
+	maxBioLen         = 300
+)
+
+// updateMeRequest is the profile form, submitted whole. A field arriving as
+// null therefore means "clear it", not "leave it alone" — there is no partial
+// update to express, and inventing one would make an empty box ambiguous.
+type updateMeRequest struct {
+	DisplayName *string `json:"display_name"`
+	Bio         *string `json:"bio"`
+}
+
+// handleUpdateMe changes the parts of a profile its owner writes.
+//
+// The username is deliberately not among them. It is in the URL of the
+// profile and of every list on it, so renaming would break links other people
+// have already shared — the same reason a list's slug does not follow its
+// title.
+func (a *App) handleUpdateMe(w http.ResponseWriter, r *http.Request) {
+	var req updateMeRequest
+	if err := decodeJSON(w, r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	displayName, ok := cleanOptionalText(req.DisplayName, maxDisplayNameLen)
+	if !ok {
+		writeError(w, http.StatusBadRequest, "a display name must be under 50 characters")
+		return
+	}
+	bio, ok := cleanOptionalText(req.Bio, maxBioLen)
+	if !ok {
+		writeError(w, http.StatusBadRequest, "a bio must be under 300 characters")
+		return
+	}
+
+	userID := userIDFrom(r.Context())
+	if _, err := a.DB.Exec(r.Context(),
+		`UPDATE users SET display_name = $2, bio = $3 WHERE id = $1`,
+		userID, displayName, bio,
+	); err != nil {
+		writeError(w, http.StatusInternalServerError, "could not save your profile")
+		return
+	}
+
+	u, err := a.userByID(r.Context(), userID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not load your profile")
+		return
+	}
+	writeJSON(w, http.StatusOK, u)
+}
+
+// cleanOptionalText trims a submitted field and collapses blank to absent, so
+// that clearing a name and never having set one both end up as NULL rather
+// than as an empty string that renders as a stray blank line.
+//
+// Counted in characters, not bytes: a name is a person's, and "50" should mean
+// the same number of letters whatever alphabet they are written in.
+func cleanOptionalText(v *string, max int) (*string, bool) {
+	if v == nil {
+		return nil, true
+	}
+	trimmed := strings.TrimSpace(*v)
+	if trimmed == "" {
+		return nil, true
+	}
+	if utf8.RuneCountInString(trimmed) > max {
+		return nil, false
+	}
+	return &trimmed, true
+}
 
 // handleMe returns the logged-in user. The frontend calls this on page load to
 // turn a stored token back into a user, rather than trusting cached data.
